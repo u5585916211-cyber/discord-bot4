@@ -38,23 +38,22 @@ ADMIN_PANEL_CHANNEL_ID = 1490335327619911873
 
 WELCOME_CHANNEL_ID = 1490374553183060090
 RULES_CHANNEL_ID = 1490376004391272498
-VOUCH_CHANNEL_ID = 1490372381791748176
+VOUCH_CHANNEL_ID = 1490372381791748176  # ⚠️ DEIN VOUCH KANAL
+ANNOUNCEMENT_CHANNEL_ID = 1490329714022289562 # ⚠️ KANAL FÜR WEBSITE ANNOUNCEMENTS
+WEB_KEY_CHANNEL_ID = 1490476535843393679
 
 REDEEM_ROLE_ID = 1490321899266506913
 RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
-WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548"
-WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d3cfcd&is=69d27e4d&hm=168f0fdba0376421e2a18ad6f421112517035adb2f0711d5c658521f9320c8b6&=&format=webp&width=548&height=548"
+WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
+WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d3cfcd&is=69d27e4d&hm=168f0fdba0376421e2a18ad6f421112517035adb2f0711d5c658521f9320c8b6&=&format=webp&width=548&height=548"
 
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
-ETHEREUM_ADDRESS = "0x6Ba2afdA7e61817f9c27f98ffAfe9051F9ad8167"
-SOLANA_ADDRESS = "DnzXgySsPnSdEKsMJub21dBjM6bcT2jtic73VeutN3p4"
 
 LTC_MIN_CONFIRMATIONS = 1
-EXPIRY_REMINDER_HOURS = 12
 
 # =========================================================
 # COLORS & FILES
@@ -64,59 +63,45 @@ COLOR_WARN = 0xFEE75C; COLOR_DENY = 0xED4245; COLOR_LOG = 0x2B2D31
 COLOR_SUCCESS = 0x57F287; COLOR_INFO = 0x5865F2; COLOR_PENDING = 0xFAA61A
 COLOR_ADMIN = 0x9B59B6; COLOR_WELCOME = 0xDD0000
 
-KEYS_FILE = "keys.json"
-REDEEMED_FILE = "redeemed.json"
-USED_TXIDS_FILE = "used_txids.json"
-USED_PAYSAFE_FILE = "used_paysafecodes.json"
-USED_AMAZON_FILE = "used_amazoncodes.json"
-BLACKLIST_FILE = "blacklist.json"
-INVOICES_FILE = "invoices.json"
-PROMOS_FILE = "promos.json"
+KEYS_FILE = "keys.json"; REDEEMED_FILE = "redeemed.json"
+USED_TXIDS_FILE = "used_txids.json"; USED_PAYSAFE_FILE = "used_paysafecodes.json"
+USED_AMAZON_FILE = "used_amazoncodes.json"; BLACKLIST_FILE = "blacklist.json"
+INVOICES_FILE = "invoices.json"; PROMOS_FILE = "promos.json"
+WEBKEYS_FILE = "web_keys.json" # Speichert die Admin-Keys für die Website
+ACTIVITY_FILE = "activity.json"
 
-# =========================================================
-# PRODUCTS & PAYMENTS
-# =========================================================
 PRODUCTS = {
     "day_1": {"label": "1 Day", "price_eur": 5, "duration": timedelta(days=1), "key_prefix": "GEN-1D"},
     "week_1": {"label": "1 Week", "price_eur": 15, "duration": timedelta(weeks=1), "key_prefix": "GEN-1W"},
     "lifetime": {"label": "Lifetime", "price_eur": 30, "duration": None, "key_prefix": "GEN-LT"}
 }
+PAYMENTS = {"paypal": {"label": "PayPal", "emoji": "💸"}, "litecoin": {"label": "Litecoin", "emoji": "🪙"}, "paysafecard": {"label": "Paysafecard", "emoji": "💳"}, "amazoncard": {"label": "Amazon Card", "emoji": "🎁"}}
 
-PAYMENTS = {
-    "paypal": {"label": "PayPal", "emoji": "💸"},
-    "litecoin": {"label": "Litecoin", "emoji": "🪙"},
-    "ethereum": {"label": "Ethereum", "emoji": "🔷"},
-    "solana": {"label": "Solana", "emoji": "🟣"},
-    "paysafecard": {"label": "Paysafecard", "emoji": "💳"},
-    "amazoncard": {"label": "Amazon Card", "emoji": "🎁"},
-}
-
-# =========================================================
-# BOT SETUP & DATABASES
-# =========================================================
 intents = discord.Intents.default()
-intents.guilds = True
-intents.members = True
-intents.message_content = True
+intents.guilds = True; intents.members = True; intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-ticket_data = {}; forwarded_paysafe_codes = {}; forwarded_amazon_codes = {}
-keys_db = {}; redeemed_db = {}; used_txids_db = {}; used_paysafe_db = {}
-used_amazon_db = {}; blacklist_db = {}; invoices_db = {}; promos_db = {}
+ticket_data = {}; keys_db = {}; redeemed_db = {}; used_txids_db = {}; used_paysafe_db = {}
+used_amazon_db = {}; blacklist_db = {}; invoices_db = {}; promos_db = {}; webkeys_db = {}; activity_db = []
 
-def load_json(path: str, default):
+def load_json(path, default):
     if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f: json.dump(default, f, indent=4)
+        with open(path, "w", encoding="utf-8") as f: json.dump(default, f)
         return default
     with open(path, "r", encoding="utf-8") as f:
         try: return json.load(f)
-        except json.JSONDecodeError: return default
-
-def save_json(path: str, data):
+        except: return default
+def save_json(path, data):
     with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
 
+def log_activity(action, user="System"):
+    global activity_db
+    activity_db.insert(0, {"time": iso_now(), "user": str(user), "action": action})
+    activity_db = activity_db[:50] # Nur die letzten 50 speichern
+    save_json(ACTIVITY_FILE, activity_db)
+
 # =========================================================
-# 🌍 HIGH-END WEB DASHBOARD & API
+# 🌍 HIGH-END WEB DASHBOARD & API (SECURE)
 # =========================================================
 DASHBOARD_HTML = """
 <!DOCTYPE html>
@@ -126,257 +111,383 @@ DASHBOARD_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vale Gen | Pro Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f111a; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .glow-text { text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .glow-text { text-shadow: 0 0 15px rgba(168, 85, 247, 0.6); }
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0f111a; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
 <body class="text-gray-200 flex h-screen overflow-hidden">
 
-    <aside class="w-64 glass-panel border-r flex flex-col justify-between hidden md:flex z-10">
-        <div>
-            <div class="h-20 flex items-center justify-center border-b border-gray-700/50">
-                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 glow-text">
-                    <i class="fa-solid fa-bolt mr-2 text-purple-400"></i>VALE GEN
-                </h1>
-            </div>
-            <nav class="p-4 space-y-2 mt-4">
-                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-purple-400 bg-purple-500/10 font-semibold transition">
-                    <i class="fa-solid fa-chart-pie w-6"></i> Overview
-                </button>
-                <button onclick="switchTab('keys')" id="btn-keys" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition">
-                    <i class="fa-solid fa-key w-6"></i> Key Manager
-                </button>
-                <button onclick="switchTab('blacklist')" id="btn-blacklist" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition">
-                    <i class="fa-solid fa-ban w-6"></i> Blacklist
-                </button>
-            </nav>
+    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 backdrop-blur-md">
+        <div class="glass-panel p-8 rounded-2xl w-96 text-center shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 mb-6"><i class="fa-solid fa-lock mr-2"></i>Admin Login</h2>
+            <input type="password" id="login-key" class="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white text-center tracking-widest focus:border-purple-500 focus:outline-none mb-4" placeholder="VALE-ADMIN-XXXX">
+            <button onclick="login()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:scale-105">Access Dashboard</button>
+            <p id="login-error" class="text-red-400 mt-4 text-sm hidden">Ungültiger Key!</p>
         </div>
-        <div class="p-6 border-t border-gray-700/50 text-center text-xs text-gray-500">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> System Online</span>
-        </div>
-    </aside>
+    </div>
 
-    <main class="flex-1 flex flex-col h-screen overflow-y-auto relative">
-        <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
-        
-        <header class="h-20 flex items-center justify-between px-8 z-10">
-            <h2 id="page-title" class="text-2xl font-bold text-white">Overview</h2>
-            <div class="flex items-center gap-4">
-                <div class="bg-gray-800 rounded-full py-1 px-4 text-sm border border-gray-700"><i class="fa-solid fa-user-shield text-indigo-400 mr-2"></i>Admin Mode</div>
+    <div id="app-layout" class="flex w-full h-full hidden">
+        <aside class="w-64 glass-panel border-r border-gray-800 flex flex-col justify-between hidden md:flex z-10">
+            <div>
+                <div class="h-20 flex items-center justify-center border-b border-gray-800">
+                    <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 glow-text"><i class="fa-solid fa-bolt mr-2"></i>VALE GEN</h1>
+                </div>
+                <nav class="p-4 space-y-2 mt-4">
+                    <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-purple-400 bg-purple-500/10 font-bold transition"><i class="fa-solid fa-chart-line w-6"></i> Overview</button>
+                    <button onclick="switchTab('promos')" id="btn-promos" class="nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition"><i class="fa-solid fa-ticket w-6"></i> Promo Codes</button>
+                    <button onclick="switchTab('lookup')" id="btn-lookup" class="nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition"><i class="fa-solid fa-magnifying-glass w-6"></i> User Lookup</button>
+                    <button onclick="switchTab('announce')" id="btn-announce" class="nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition"><i class="fa-solid fa-bullhorn w-6"></i> Announcements</button>
+                    <button onclick="switchTab('blacklist')" id="btn-blacklist" class="nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition"><i class="fa-solid fa-ban w-6"></i> Blacklist</button>
+                </nav>
             </div>
-        </header>
+            <div class="p-6 border-t border-gray-800 text-center">
+                <button onclick="logout()" class="text-sm text-gray-500 hover:text-red-400 transition"><i class="fa-solid fa-power-off mr-1"></i> Logout</button>
+            </div>
+        </aside>
 
-        <div class="p-8 z-10">
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto relative bg-[#0b0f19]">
+            <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-900/10 to-transparent pointer-events-none z-0"></div>
             
-            <div id="tab-dashboard" class="tab-content active">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-purple-500/50 transition">
-                        <div class="absolute -right-4 -top-4 text-purple-500/10 text-7xl"><i class="fa-solid fa-euro-sign"></i></div>
-                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Revenue</p>
-                        <h3 class="text-4xl font-extrabold text-white" id="stat-revenue">0.00€</h3>
-                    </div>
-                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-blue-500/50 transition">
-                        <div class="absolute -right-4 -top-4 text-blue-500/10 text-7xl"><i class="fa-solid fa-users"></i></div>
-                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Buyers Today</p>
-                        <h3 class="text-4xl font-extrabold text-white" id="stat-buyers">0</h3>
-                    </div>
-                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition">
-                        <div class="absolute -right-4 -top-4 text-emerald-500/10 text-7xl"><i class="fa-solid fa-key"></i></div>
-                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Generated Keys</p>
-                        <h3 class="text-4xl font-extrabold text-white" id="stat-keys">0</h3>
-                    </div>
+            <header class="h-20 flex items-center justify-between px-8 z-10 border-b border-gray-800/50 bg-gray-900/50 backdrop-blur-sm sticky top-0">
+                <h2 id="page-title" class="text-2xl font-bold text-white tracking-wide">Overview</h2>
+                <div class="flex items-center gap-4">
+                    <span class="bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-bold px-3 py-1.5 rounded-full flex items-center"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></span> API Live</span>
                 </div>
+            </header>
+
+            <div class="p-8 z-10 w-full max-w-7xl mx-auto">
                 
-                <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-receipt mr-2 text-indigo-400"></i>Recent Orders</h3>
-                <div class="glass-panel rounded-2xl overflow-hidden">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-gray-800/50 border-b border-gray-700/50">
-                            <tr><th class="px-6 py-4 font-semibold text-gray-300">Invoice ID</th><th class="px-6 py-4 font-semibold text-gray-300">Buyer ID</th><th class="px-6 py-4 font-semibold text-gray-300">Product</th><th class="px-6 py-4 font-semibold text-gray-300">Price</th><th class="px-6 py-4 font-semibold text-gray-300">Method</th></tr>
-                        </thead>
-                        <tbody id="table-invoices" class="divide-y divide-gray-800/50">
-                            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading data...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="tab-keys" class="tab-content">
-                <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl">
-                    <div class="p-6 border-b border-gray-700/50 flex justify-between items-center bg-gray-800/30">
-                        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-database mr-2 text-emerald-400"></i>Key Database</h3>
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">All Time</span>
-                    </div>
-                    <div class="overflow-x-auto max-h-[600px]">
-                        <table class="w-full text-left text-sm whitespace-nowrap">
-                            <thead class="bg-gray-800/50 border-b border-gray-700/50 sticky top-0 backdrop-blur-md">
-                                <tr><th class="px-6 py-4 text-gray-300">Key</th><th class="px-6 py-4 text-gray-300">Type</th><th class="px-6 py-4 text-gray-300">Status</th><th class="px-6 py-4 text-gray-300">Bound To</th></tr>
-                            </thead>
-                            <tbody id="table-keys" class="divide-y divide-gray-800/50"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-blacklist" class="tab-content">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1">
-                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-4 border-t-red-500">
-                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-user-plus mr-2 text-red-400"></i>Add to Blacklist</h3>
-                            <div class="space-y-4">
-                                <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Discord User ID</label><input type="text" id="bl-id" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition" placeholder="z.B. 123456789"></div>
-                                <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Reason</label><input type="text" id="bl-reason" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition" placeholder="z.B. Scam attempt"></div>
-                                <button onclick="addBlacklist()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.4)] mt-2">Ban User</button>
-                            </div>
+                <div id="tab-dashboard" class="tab-content active">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-purple-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p>
+                            <h3 class="text-4xl font-black text-white mt-1" id="stat-rev">0.00€</h3>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-blue-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p>
+                            <h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-emerald-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p>
+                            <h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3>
                         </div>
                     </div>
-                    <div class="lg:col-span-2">
-                        <div class="glass-panel rounded-2xl overflow-hidden h-full flex flex-col">
-                            <div class="p-6 border-b border-gray-700/50 bg-gray-800/30">
-                                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-list mr-2 text-red-400"></i>Banned Users</h3>
-                            </div>
-                            <div class="flex-1 overflow-x-auto p-4">
-                                <table class="w-full text-left text-sm">
-                                    <thead class="text-gray-400 border-b border-gray-700/50"><tr><th class="pb-3 px-4">User ID</th><th class="pb-3 px-4">Reason</th><th class="pb-3 px-4 text-right">Action</th></tr></thead>
-                                    <tbody id="table-blacklist" class="divide-y divide-gray-800/50"></tbody>
-                                </table>
-                            </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="lg:col-span-2 glass-panel p-6 rounded-2xl">
+                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-area mr-2 text-purple-400"></i>Revenue (Last 7 Days)</h3>
+                            <canvas id="revenueChart" height="100"></canvas>
+                        </div>
+                        <div class="lg:col-span-1 glass-panel p-6 rounded-2xl flex flex-col">
+                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-bolt mr-2 text-yellow-400"></i>Live Activity</h3>
+                            <div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+                <div id="tab-promos" class="tab-content">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-1 glass-panel p-6 rounded-2xl border-t-2 border-t-indigo-500">
+                            <h3 class="text-lg font-bold text-white mb-4">Create Promo</h3>
+                            <input type="text" id="p-code" placeholder="Code (e.g. VALE50)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-3 text-white uppercase">
+                            <input type="number" id="p-disc" placeholder="Discount %" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-3 text-white">
+                            <input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-4 text-white">
+                            <button onclick="createPromo()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg transition">Create Code</button>
+                        </div>
+                        <div class="md:col-span-2 glass-panel rounded-2xl overflow-hidden">
+                            <div class="p-6 border-b border-gray-800"><h3 class="text-lg font-bold text-white">Active Promo Codes</h3></div>
+                            <table class="w-full text-left text-sm"><thead class="text-gray-400 border-b border-gray-800"><tr><th class="p-4">Code</th><th class="p-4">Discount</th><th class="p-4">Uses Left</th><th class="p-4 text-right">Action</th></tr></thead><tbody id="table-promos" class="divide-y divide-gray-800"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-lookup" class="tab-content">
+                    <div class="glass-panel p-6 rounded-2xl mb-6 flex gap-4">
+                        <input type="text" id="lookup-id" placeholder="Enter Discord User ID..." class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none">
+                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition"><i class="fa-solid fa-search mr-2"></i>Search</button>
+                    </div>
+                    <div id="lookup-result" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white">0.00€</h3>
+                            </div>
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
+                            </div>
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-red-500">
+                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold text-white mt-2">Clean</h3>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl overflow-hidden"><div class="p-4 border-b border-gray-800 font-bold">Purchase History</div><table class="w-full text-left text-sm"><thead class="text-gray-400 border-b border-gray-800"><tr><th class="p-4">Invoice</th><th class="p-4">Product</th><th class="p-4">Price</th><th class="p-4">Date</th></tr></thead><tbody id="lu-table" class="divide-y divide-gray-800"></tbody></table></div>
+                    </div>
+                </div>
+
+                <div id="tab-announce" class="tab-content">
+                    <div class="glass-panel p-6 rounded-2xl border-t-2 border-t-yellow-500 max-w-3xl">
+                        <h3 class="text-xl font-bold text-white mb-2"><i class="fa-solid fa-bullhorn mr-2 text-yellow-400"></i>Send Server Announcement</h3>
+                        <p class="text-gray-400 mb-6 text-sm">Dies sendet ein offizielles Bot-Embed direkt in den Info-Kanal auf dem Server.</p>
+                        <input type="text" id="ann-title" placeholder="Überschrift (z.B. 🚀 FETTES UPDATE)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-4 text-white font-bold text-lg">
+                        <textarea id="ann-desc" placeholder="Nachricht hier eingeben..." rows="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-4 text-white resize-none"></textarea>
+                        <input type="text" id="ann-img" placeholder="Bild URL (Optional)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-6 text-white text-sm">
+                        <button onclick="sendAnnounce()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(202,138,4,0.3)]"><i class="fa-solid fa-paper-plane mr-2"></i>Senden an Discord</button>
+                    </div>
+                </div>
+
+                <div id="tab-blacklist" class="tab-content">
+                    <div class="glass-panel p-6 rounded-2xl mb-6 border-l-4 border-l-red-500 flex gap-4 items-center">
+                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
+                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
+                        <button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 font-bold rounded-lg transition">Ban User</button>
+                    </div>
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <table class="w-full text-left text-sm"><thead class="text-gray-400 border-b border-gray-800 bg-gray-900/50"><tr><th class="p-4">User ID</th><th class="p-4">Reason</th><th class="p-4 text-right">Action</th></tr></thead><tbody id="table-blacklist" class="divide-y divide-gray-800"></tbody></table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
 
     <script>
-        const API = {
-            async getStats() { const r = await fetch('/api/stats'); return await r.json(); },
-            async getKeys() { const r = await fetch('/api/keys'); return await r.json(); },
-            async getBlacklist() { const r = await fetch('/api/blacklist'); return await r.json(); },
-            async removeBlacklist(uid) { await fetch('/api/blacklist/remove', {method:'POST', body:JSON.stringify({user_id:uid})}); },
-            async addBlacklist(uid, reason) { await fetch('/api/blacklist/add', {method:'POST', body:JSON.stringify({user_id:uid, reason:reason})}); }
-        };
+        let myChart = null;
+
+        // --- AUTH SYSTEM ---
+        function getHeaders() { return {'Authorization': 'Bearer ' + localStorage.getItem('admin_key'), 'Content-Type': 'application/json'}; }
+        function logout() { localStorage.removeItem('admin_key'); location.reload(); }
+        
+        async function fetchAPI(endpoint, options={}) {
+            options.headers = getHeaders();
+            const res = await fetch(endpoint, options);
+            if(res.status === 401) { logout(); throw new Error('Unauthorized'); }
+            return await res.json();
+        }
+
+        async function login() {
+            const key = document.getElementById('login-key').value;
+            const res = await fetch('/api/auth', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:key})});
+            if(res.ok) { localStorage.setItem('admin_key', key); initApp(); }
+            else { document.getElementById('login-error').classList.remove('hidden'); }
+        }
+
+        function checkAuthOnLoad() {
+            if(localStorage.getItem('admin_key')) initApp();
+            else { document.getElementById('login-overlay').classList.remove('hidden'); document.getElementById('app-layout').classList.add('hidden'); }
+        }
+
+        // --- APP LOGIC ---
+        function initApp() {
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('app-layout').classList.remove('hidden');
+            switchTab('dashboard');
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(el => { el.className = "nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition"; });
+            document.getElementById('btn-' + tabId).className = "nav-btn w-full flex items-center text-left py-3 px-4 rounded-xl text-purple-400 bg-purple-500/10 font-bold transition shadow-inner";
             
-            document.querySelectorAll('aside button').forEach(el => { el.classList.remove('text-purple-400', 'bg-purple-500/10'); el.classList.add('text-gray-400'); });
-            const btn = document.getElementById('btn-' + tabId);
-            btn.classList.add('text-purple-400', 'bg-purple-500/10'); btn.classList.remove('text-gray-400');
-            
-            const titles = {'dashboard': 'Overview', 'keys': 'Key Manager', 'blacklist': 'Blacklist Management'};
+            const titles = {'dashboard': 'Overview', 'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Announcements', 'blacklist': 'Blacklist'};
             document.getElementById('page-title').innerText = titles[tabId];
             
-            if(tabId === 'dashboard') loadStats();
-            else if(tabId === 'keys') loadKeys();
-            else if(tabId === 'blacklist') loadBlacklist();
+            if(tabId === 'dashboard') { loadDashboard(); loadActivity(); }
+            if(tabId === 'promos') loadPromos();
+            if(tabId === 'blacklist') loadBlacklist();
         }
 
-        async function loadStats() {
-            const data = await API.getStats();
-            document.getElementById('stat-revenue').innerText = data.total_revenue.toFixed(2) + '€';
-            document.getElementById('stat-buyers').innerText = data.buyers_today;
-            document.getElementById('stat-keys').innerText = data.total_keys;
+        async function loadDashboard() {
+            const data = await fetchAPI('/api/stats');
+            document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€';
+            document.getElementById('stat-orders').innerText = data.buyers_today;
+            document.getElementById('stat-keys').innerText = data.active_keys;
             
-            const tb = document.getElementById('table-invoices');
-            if(data.recent_invoices.length === 0) tb.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No orders yet</td></tr>';
-            else {
-                tb.innerHTML = data.recent_invoices.map(inv => `
-                    <tr class="hover:bg-gray-800/30 transition">
-                        <td class="px-6 py-4 font-mono text-indigo-400">${inv.id}</td>
-                        <td class="px-6 py-4 text-gray-300">${inv.buyer}</td>
-                        <td class="px-6 py-4"><span class="bg-gray-800 border border-gray-700 px-2 py-1 rounded text-xs">${inv.product}</span></td>
-                        <td class="px-6 py-4 text-emerald-400 font-bold">${inv.price}€</td>
-                        <td class="px-6 py-4 text-gray-400">${inv.method}</td>
-                    </tr>
-                `).join('');
-            }
+            // Render Chart
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.chart_labels,
+                    datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', borderWidth: 3, fill: true, tension: 0.4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: '#1e293b'}}, x: {grid: {color: '#1e293b'}} } }
+            });
         }
 
-        async function loadKeys() {
-            const data = await API.getKeys();
-            const tb = document.getElementById('table-keys');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
-            tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
-                const badge = info.used 
-                    ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>'
-                    : '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">Active</span>';
-                return `<tr class="hover:bg-gray-800/30 transition"><td class="px-6 py-4 font-mono text-purple-400">${key}</td><td class="px-6 py-4">${info.type}</td><td class="px-6 py-4">${badge}</td><td class="px-6 py-4 text-gray-400">${info.bound_user_id || '-'}</td></tr>`;
-            }).join('');
+        async function loadActivity() {
+            const data = await fetchAPI('/api/activity');
+            document.getElementById('activity-feed').innerHTML = data.map(a => `
+                <div class="p-3 bg-gray-800/50 rounded-lg border border-gray-700/50 flex justify-between items-center">
+                    <div><span class="font-bold text-gray-300 text-xs mr-2">${a.user}</span><span class="text-sm text-gray-400">${a.action}</span></div>
+                    <span class="text-xs text-gray-600">${a.time.split('T')[1].substring(0,5)}</span>
+                </div>`).join('');
         }
+
+        async function loadPromos() {
+            const data = await fetchAPI('/api/promos');
+            const tb = document.getElementById('table-promos');
+            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active promos.</td></tr>';
+            tb.innerHTML = Object.entries(data).map(([code, info]) => `
+                <tr class="hover:bg-gray-800/30"><td class="p-4 font-mono font-bold text-indigo-400">${code}</td><td class="p-4 text-emerald-400">-${info.discount}%</td><td class="p-4 text-gray-300">${info.uses}</td>
+                <td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+        }
+        async function createPromo() {
+            const c=document.getElementById('p-code').value.toUpperCase(), d=document.getElementById('p-disc').value, u=document.getElementById('p-uses').value;
+            if(!c||!d||!u) return alert("Fill all fields");
+            await fetchAPI('/api/promos/add', {method:'POST', body:JSON.stringify({code:c, discount:parseInt(d), uses:int(u)})});
+            document.getElementById('p-code').value=''; document.getElementById('p-disc').value=''; document.getElementById('p-uses').value=''; loadPromos();
+        }
+        async function rmPromo(code) { await fetchAPI('/api/promos/remove', {method:'POST', body:JSON.stringify({code:code})}); loadPromos(); }
 
         async function loadBlacklist() {
-            const data = await API.getBlacklist();
+            const data = await fetchAPI('/api/blacklist');
             const tb = document.getElementById('table-blacklist');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Blacklist ist leer ✨</td></tr>';
-            tb.innerHTML = Object.entries(data).map(([uid, info]) => `
-                <tr class="hover:bg-gray-800/30 transition border-b border-gray-800/50">
-                    <td class="px-4 py-4 font-mono text-gray-300">${uid}</td>
-                    <td class="px-4 py-4 text-gray-400">${info.reason}</td>
-                    <td class="px-4 py-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-xs bg-gray-800 hover:bg-red-600 border border-gray-700 hover:border-red-500 text-gray-300 hover:text-white py-1 px-3 rounded transition shadow-lg"><i class="fa-solid fa-trash mr-1"></i>Remove</button></td>
-                </tr>
-            `).join('');
+            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">Blacklist is empty.</td></tr>';
+            tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-gray-800/30"><td class="p-4 font-mono text-gray-300">${uid}</td><td class="p-4 text-gray-400">${info.reason}</td><td class="p-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
         }
-
         async function addBlacklist() {
-            const uid = document.getElementById('bl-id').value;
-            const rsn = document.getElementById('bl-reason').value || "Banned via Web Panel";
-            if(!uid) return alert('Bitte Discord ID eingeben!');
-            document.getElementById('bl-id').value = ''; document.getElementById('bl-reason').value = '';
-            await API.addBlacklist(uid, rsn); loadBlacklist();
+            const uid=document.getElementById('bl-id').value, rsn=document.getElementById('bl-reason').value||"Web Ban";
+            if(!uid) return; await fetchAPI('/api/blacklist/add', {method:'POST', body:JSON.stringify({user_id:uid, reason:rsn})});
+            document.getElementById('bl-id').value=''; document.getElementById('bl-reason').value=''; loadBlacklist();
+        }
+        async function rmBlacklist(uid) { await fetchAPI('/api/blacklist/remove', {method:'POST', body:JSON.stringify({user_id:uid})}); loadBlacklist(); }
+
+        async function lookupUser() {
+            const uid = document.getElementById('lookup-id').value;
+            if(!uid) return;
+            const data = await fetchAPI('/api/lookup', {method:'POST', body:JSON.stringify({user_id:uid})});
+            document.getElementById('lookup-result').classList.remove('hidden');
+            document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€';
+            document.getElementById('lu-orders').innerText = data.total_orders;
+            const b = document.getElementById('lu-banned');
+            if(data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-bold text-red-500 mt-2"; } else { b.innerText = "Clean"; b.className = "text-xl font-bold text-emerald-500 mt-2"; }
+            
+            const tb = document.getElementById('lu-table');
+            if(data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No purchases found.</td></tr>';
+            else tb.innerHTML = data.invoices.map(i => `<tr><td class="p-4 font-mono text-xs text-gray-400">${i.id}</td><td class="p-4">${i.product}</td><td class="p-4 font-bold text-emerald-400">${i.price}€</td><td class="p-4 text-xs">${i.date.split('T')[0]}</td></tr>`).join('');
         }
 
-        async function rmBlacklist(uid) {
-            if(!confirm('Nutzer entbannen?')) return;
-            await API.removeBlacklist(uid); loadBlacklist();
+        async function sendAnnounce() {
+            const t = document.getElementById('ann-title').value, d = document.getElementById('ann-desc').value, i = document.getElementById('ann-img').value;
+            if(!t || !d) return alert("Title and Description required!");
+            await fetchAPI('/api/announce', {method:'POST', body:JSON.stringify({title:t, desc:d, img:i})});
+            alert("Announcement sent to Discord!");
+            document.getElementById('ann-title').value=''; document.getElementById('ann-desc').value=''; document.getElementById('ann-img').value='';
         }
 
-        // Init
-        switchTab('dashboard');
+        window.onload = checkAuthOnLoad;
     </script>
 </body>
 </html>
 """
 
+def is_authorized(request):
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "): return False
+    token = auth.split(" ")[1]
+    return token in webkeys_db
+
 async def handle_dashboard(request): return web.Response(text=DASHBOARD_HTML, content_type='text/html')
-async def api_get_blacklist(request): return web.json_response(blacklist_db)
-async def api_get_keys(request): return web.json_response(keys_db)
+
+async def api_auth(request):
+    data = await request.json()
+    if data.get("key") in webkeys_db: return web.json_response({"status": "ok"})
+    return web.Response(status=401)
+
 async def api_get_stats(request):
-    now = now_utc(); today_buyers = 0; total_rev = 0.0; recent = []
-    for inv_id, data in list(invoices_db.items())[-10:]:
-        recent.append({"id": inv_id, "buyer": data["buyer_id"], "product": data["product_type"], "price": data.get("final_price_eur", 0), "method": data["payment_key"]})
-        total_rev += float(data.get("final_price_eur", 0))
+    if not is_authorized(request): return web.Response(status=401)
+    now = now_utc(); today_buyers = set(); total_rev = 0.0
+    
+    # Chart Data Calculation (Last 7 Days)
+    days = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
+    labels = [d.strftime("%a") for d in days]
+    rev_data = {d: 0.0 for d in days}
+
+    for inv_id, data in invoices_db.items():
+        price = float(data.get("final_price_eur", 0))
+        total_rev += price
         try:
-            if datetime.fromisoformat(data["created_at"]).date() == now.date(): today_buyers += 1
+            d = datetime.fromisoformat(data["created_at"]).date()
+            if d == now.date(): today_buyers.add(data["buyer_id"])
+            if d in rev_data: rev_data[d] += price
         except: pass
-    return web.json_response({"total_revenue": total_rev, "buyers_today": today_buyers, "total_keys": len(keys_db), "recent_invoices": recent[::-1]})
+    
+    active_k = sum(1 for k, v in keys_db.items() if not v["used"])
+    return web.json_response({"total_revenue": total_rev, "buyers_today": len(today_buyers), "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())})
 
-async def api_remove_blacklist(request):
+async def api_get_activity(request):
+    if not is_authorized(request): return web.Response(status=401)
+    return web.json_response(activity_db)
+
+async def api_promos(request):
+    if not is_authorized(request): return web.Response(status=401)
+    return web.json_response(promos_db)
+async def api_add_promo(request):
+    if not is_authorized(request): return web.Response(status=401)
+    d = await request.json()
+    promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}
+    save_json(PROMOS_FILE, promos_db); log_activity(f"Erstellte Promo {d['code']}")
+    return web.json_response({"ok": True})
+async def api_rm_promo(request):
+    if not is_authorized(request): return web.Response(status=401)
+    d = await request.json()
+    if d["code"] in promos_db: del promos_db[d["code"]]; save_json(PROMOS_FILE, promos_db)
+    return web.json_response({"ok": True})
+
+async def api_lookup(request):
+    if not is_authorized(request): return web.Response(status=401)
     uid = (await request.json()).get("user_id")
-    if uid in blacklist_db: del blacklist_db[uid]; save_json(BLACKLIST_FILE, blacklist_db)
-    return web.json_response({"status": "success"})
+    spent = 0.0; invs = []
+    for i_id, data in invoices_db.items():
+        if data["buyer_id"] == uid:
+            spent += float(data.get("final_price_eur", 0))
+            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label","Unk"), "price": data.get("final_price_eur",0), "date": data["created_at"]})
+    return web.json_response({"total_spent": spent, "total_orders": len(invs), "is_banned": uid in blacklist_db, "invoices": invs[::-1]})
 
+async def api_announce(request):
+    if not is_authorized(request): return web.Response(status=401)
+    d = await request.json()
+    ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    if ch:
+        emb = discord.Embed(title=d["title"], description=d["desc"], color=COLOR_WELCOME)
+        if d.get("img"): emb.set_image(url=d["img"])
+        await ch.send(embed=emb)
+        log_activity("Sendete ein Announcement")
+    return web.json_response({"ok": True})
+
+async def api_get_blacklist(request):
+    if not is_authorized(request): return web.Response(status=401)
+    return web.json_response(blacklist_db)
+async def api_remove_blacklist(request):
+    if not is_authorized(request): return web.Response(status=401)
+    uid = (await request.json()).get("user_id")
+    if uid in blacklist_db: del blacklist_db[uid]; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Entbannte {uid}")
+    return web.json_response({"status": "success"})
 async def api_add_blacklist(request):
+    if not is_authorized(request): return web.Response(status=401)
     data = await request.json()
     uid = data.get("user_id"); reason = data.get("reason", "Web Panel Ban")
-    if uid:
-        blacklist_db[uid] = {"reason": reason, "added_by": "Web Admin", "added_at": iso_now()}
-        save_json(BLACKLIST_FILE, blacklist_db)
+    if uid: blacklist_db[uid] = {"reason": reason, "added_by": "Web Admin", "added_at": iso_now()}; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Bannte {uid}")
     return web.json_response({"status": "success"})
 
 async def start_web_server():
     app = web.Application()
-    app.router.add_get('/', handle_dashboard)
-    app.router.add_get('/api/stats', api_get_stats); app.router.add_get('/api/keys', api_get_keys); app.router.add_get('/api/blacklist', api_get_blacklist)
-    app.router.add_post('/api/blacklist/remove', api_remove_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist)
+    app.router.add_get('/', handle_dashboard); app.router.add_post('/api/auth', api_auth)
+    app.router.add_get('/api/stats', api_get_stats); app.router.add_get('/api/activity', api_get_activity)
+    app.router.add_get('/api/promos', api_promos); app.router.add_post('/api/promos/add', api_add_promo); app.router.add_post('/api/promos/remove', api_rm_promo)
+    app.router.add_post('/api/lookup', api_lookup); app.router.add_post('/api/announce', api_announce)
+    app.router.add_get('/api/blacklist', api_get_blacklist); app.router.add_post('/api/blacklist/remove', api_remove_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist)
+    
     runner = web.AppRunner(app); await runner.setup()
     port = int(os.environ.get("PORT", 8080)); site = web.TCPSite(runner, '0.0.0.0', port); await site.start()
 
@@ -403,9 +514,7 @@ def parse_duration_string(duration_text: str) -> timedelta | None:
     return timedelta(days=v) if u == "d" else timedelta(hours=v) if u == "h" else timedelta(weeks=v)
 
 def build_invoice_id() -> str: return f"GEN-{uuid.uuid4().hex[:10].upper()}"
-
-def is_reseller(member: discord.Member | None) -> bool:
-    return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
+def is_reseller(member: discord.Member | None) -> bool: return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
 
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
     base_price = PRODUCTS[product_key]["price_eur"]
@@ -425,12 +534,12 @@ def generate_key(product_type: str, ticket_id: int | None = None) -> str:
         key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
         if key not in keys_db:
             keys_db[key] = {"type": product_type, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "redeemed_at": None, "approved_in_ticket": ticket_id}
-            save_json(KEYS_FILE, keys_db)
+            save_json(KEYS_FILE, keys_db); log_activity("Generierte einen Key")
             return key
 
 def create_invoice_record(invoice_id, buyer_id, product_type, payment_key, key, ticket_id, final_price_eur, reseller_discount):
     invoices_db[invoice_id] = {"buyer_id": str(buyer_id), "product_type": product_type, "payment_key": payment_key, "key": key, "ticket_id": str(ticket_id), "created_at": iso_now(), "final_price_eur": final_price_eur, "reseller_discount": reseller_discount}
-    save_json(INVOICES_FILE, invoices_db)
+    save_json(INVOICES_FILE, invoices_db); log_activity(f"Neue Invoice ({final_price_eur}€)", buyer_id)
 
 def extract_possible_paysafe_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
 def extract_possible_amazon_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
@@ -439,8 +548,7 @@ def litoshi_to_ltc(value: int) -> float: return value / 100_000_000
 def tx_matches_our_address(tx_data: dict, expected_address: str) -> tuple[bool, int]:
     total_received = 0; found = False
     for output in tx_data.get("outputs", []):
-        if expected_address in output.get("addresses", []):
-            found = True; total_received += int(output.get("value", 0))
+        if expected_address in output.get("addresses", []): found = True; total_received += int(output.get("value", 0))
     return found, total_received
 
 async def fetch_ltc_tx(txid: str):
@@ -498,7 +606,6 @@ def build_order_summary(product_key: str, payment_key: str, user: discord.Member
     elif payment_key == "solana": extra = f"## 🟣 Solana Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{SOLANA_ADDRESS}`\n\n**After payment:**\n• Click **Submit Crypto TXID**"
     elif payment_key == "paysafecard": extra = f"## 💳 Paysafecard Payment\n**Main price:** `{format_price(price)}€`\n\n**After buying your code:**\n• Click **Submit Paysafecard Code**"
     else: extra = f"## 🎁 Amazon Card Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{LITECOIN_ADDRESS}` (LTC Wallet for Amazon Card Trading)\n\n**After buying your Amazon card:**\n• Click **Submit Amazon Code**"
-
     return discord.Embed(title="✦ ORDER SETUP COMPLETE ✦", description=f"{premium_divider()}\n{user.mention}\n\n📦 **Product:** {product['label']}\n{price_header}\n{payment['emoji']} **Method:** {payment['label']}\n\n{extra}\n{premium_divider()}", color=COLOR_MAIN)
 
 def build_ltc_result_embed(txid: str, found_addr: bool, confirmations: int, total_received_ltc: float) -> discord.Embed:
@@ -591,23 +698,21 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     keys_db[key].update({"used": True, "used_by": str(member.id), "bound_user_id": str(member.id), "redeemed_at": iso_now()})
     save_json(KEYS_FILE, keys_db)
     redeemed_db[str(member.id)] = {"key": key, "type": product_type, "role_id": REDEEM_ROLE_ID, "redeemed_at": iso_now(), "expires_at": expires_at, "expiry_reminder_sent": False}
-    save_json(REDEEMED_FILE, redeemed_db)
+    save_json(REDEEMED_FILE, redeemed_db); log_activity("Löste einen Key ein", member.id)
 
     try: await member.add_roles(role, reason=f"Redeemed key: {key}")
     except Exception as e: return False, f"Failed to add role: {e}"
     return True, product_type
 
 # =========================================================
-# TICKETS
+# TICKETS & VIEWS
 # =========================================================
 async def create_ticket_channel(interaction: discord.Interaction, ticket_type: str):
     guild, user = interaction.guild, interaction.user
     if not guild or not isinstance(user, discord.Member): return await interaction.response.send_message("Server only.", ephemeral=True)
     if is_blacklisted(user.id): return await interaction.response.send_message(f"Blacklisted.\nReason: {blacklist_db[str(user.id)]['reason']}", ephemeral=True)
-    
     existing = await find_existing_ticket(guild, user)
     if existing: return await interaction.response.send_message(f"Ticket open: {existing.mention}", ephemeral=True)
-
     category = guild.get_channel(BUY_CATEGORY_ID if ticket_type == "buy" else SUPPORT_CATEGORY_ID)
     if not isinstance(category, discord.CategoryChannel): return await interaction.response.send_message("Category not found.", ephemeral=True)
 
@@ -624,17 +729,13 @@ async def create_ticket_channel(interaction: discord.Interaction, ticket_type: s
         await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=support_ticket_embed(user), view=TicketManageView(owner_id=user.id))
     else:
         ticket_data[channel.id] = {"user_id": user.id, "product_key": None, "payment_key": None, "last_txid": None, "last_txid_check": None, "invoice_id": None, "status": "waiting", "paysafe_submitted": False, "amazon_submitted": False, "applied_promo": None, "summary_message_id": None, "admin_message_id": None}
-        forwarded_paysafe_codes[channel.id] = []
-        forwarded_amazon_codes[channel.id] = []
+        forwarded_paysafe_codes[channel.id] = []; forwarded_amazon_codes[channel.id] = []
         await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=buy_ticket_embed(user), view=BuySetupView(owner_id=user.id))
         await send_summary_and_admin_panels(channel, user.id)
 
+    log_activity(f"Erstellte Ticket {ticket_type}", user.id)
     await send_log(guild, "🎫 Ticket Created", f"**User:** {user.mention}\n**Type:** {ticket_type.title()}\n**Channel:** {channel.mention}\n**User ID:** `{user.id}`")
     await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
-
-# =========================================================
-# MODALS & VIEWS
-# =========================================================
 
 class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
     code_input = discord.ui.TextInput(label="Promo Code", placeholder="z.B. VALE20", required=True)
@@ -642,51 +743,38 @@ class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
     async def on_submit(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
         data = ticket_data.get(interaction.channel.id)
-        if not data: return await interaction.response.send_message("No ticket data.", ephemeral=True)
-        
         code = str(self.code_input).strip().upper()
         if code not in promos_db or promos_db[code]["uses"] <= 0: return await interaction.response.send_message("❌ Ungültiger oder abgelaufener Code.", ephemeral=True)
-            
-        data["applied_promo"] = code
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message(f"✅ Gutschein `{code}` erfolgreich angewendet! (Rabatt: {promos_db[code]['discount']}%)", ephemeral=True)
+        data["applied_promo"] = code; await update_payment_summary_message(interaction.channel)
+        await interaction.response.send_message(f"✅ Gutschein `{code}` angewendet! (Rabatt: {promos_db[code]['discount']}%)", ephemeral=True)
 
 class GenericCryptoTxidModal(discord.ui.Modal, title="Paste your Crypto TXID here"):
     txid_input = discord.ui.TextInput(label="Transaction Hash (TXID)", placeholder="Paste your Ethereum or Solana TXID...", required=True, style=discord.TextStyle.short)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
-        txid = str(self.txid_input).strip()
-        data = ticket_data.get(interaction.channel.id)
+        txid = str(self.txid_input).strip(); data = ticket_data.get(interaction.channel.id)
         data["last_txid"] = txid; data["status"] = "reviewing"
         review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         embed = discord.Embed(title="🪙 Crypto TXID Submitted (Manual Review)", description=f"**Buyer:** {interaction.user.mention}\n**Ticket:** {interaction.channel.mention}\n**TXID:** `{txid}`\n**Coin:** {data['payment_key'].title()}", color=COLOR_PENDING)
         if isinstance(review_channel, discord.TextChannel): await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> Review needed.", embed=embed, view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=interaction.user.id))
         await interaction.channel.send(embed=discord.Embed(title="✅ TXID Submitted", description="Sent to staff for manual verification.", color=COLOR_SUCCESS))
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("TXID submitted.", ephemeral=True)
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("TXID submitted.", ephemeral=True)
 
 class LitecoinTxidModal(discord.ui.Modal, title="Paste your Litecoin TXID here"):
     txid_input = discord.ui.TextInput(label="Litecoin TXID", placeholder="Paste the full TXID here...", required=True, min_length=64, max_length=64)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
-        data = ticket_data.get(interaction.channel.id)
-        txid = str(self.txid_input).strip()
+        data = ticket_data.get(interaction.channel.id); txid = str(self.txid_input).strip()
         if txid in used_txids_db: return await interaction.response.send_message("TXID already submitted before.", ephemeral=True)
         await interaction.response.defer(ephemeral=True, thinking=True)
         tx_data, err = await fetch_ltc_tx(txid)
         if err or not tx_data: return await interaction.followup.send(f"Could not verify TXID right now. {err}", ephemeral=True)
-        
-        conf = int(tx_data.get("confirmations", 0))
-        f_addr, tot_litoshi = tx_matches_our_address(tx_data, LITECOIN_ADDRESS)
-        tot_ltc = litoshi_to_ltc(tot_litoshi)
-        used_txids_db[txid] = {"user_id": str(interaction.user.id), "ticket_id": str(interaction.channel.id), "used_at": iso_now()}
-        save_json(USED_TXIDS_FILE, used_txids_db)
-
+        conf = int(tx_data.get("confirmations", 0)); f_addr, tot_litoshi = tx_matches_our_address(tx_data, LITECOIN_ADDRESS); tot_ltc = litoshi_to_ltc(tot_litoshi)
+        used_txids_db[txid] = {"user_id": str(interaction.user.id), "ticket_id": str(interaction.channel.id), "used_at": iso_now()}; save_json(USED_TXIDS_FILE, used_txids_db)
         data["last_txid"] = txid; data["last_txid_check"] = {"confirmations": conf, "matched_address": f_addr, "amount_ltc": tot_ltc}; data["status"] = "reviewing"
-        await interaction.channel.send(embed=build_ltc_result_embed(txid, f_addr, conf, tot_ltc))
-        await update_payment_summary_message(interaction.channel)
+        await interaction.channel.send(embed=build_ltc_result_embed(txid, f_addr, conf, tot_ltc)); await update_payment_summary_message(interaction.channel)
         await send_log(interaction.guild, "🪙 LTC TXID Checked", f"**Buyer:** {interaction.user.mention}\n**TXID:** `{txid}`\n**Amount:** `{tot_ltc:.8f} LTC`", color=COLOR_INFO)
         msg = "TXID verified successfully." if f_addr and conf >= LTC_MIN_CONFIRMATIONS else "TXID found, waiting for confirmations." if f_addr else "TXID found, but no output to your LTC address."
         await interaction.followup.send(msg, ephemeral=True)
@@ -696,10 +784,8 @@ class PaysafeCodeModal(discord.ui.Modal, title="Paste your Paysafecard code here
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
-        data = ticket_data.get(interaction.channel.id)
-        codes_channel = interaction.guild.get_channel(PAYSAFE_CODES_CHANNEL_ID)
-        found_codes = extract_possible_paysafe_codes(str(self.paysafe_code).strip()) or [str(self.paysafe_code).strip().upper()]
-        new_codes = []
+        data = ticket_data.get(interaction.channel.id); codes_channel = interaction.guild.get_channel(PAYSAFE_CODES_CHANNEL_ID)
+        found_codes = extract_possible_paysafe_codes(str(self.paysafe_code).strip()) or [str(self.paysafe_code).strip().upper()]; new_codes = []
         for code in list(dict.fromkeys(found_codes)):
             if code not in used_paysafe_db and code not in forwarded_paysafe_codes.setdefault(interaction.channel.id, []):
                 used_paysafe_db[code] = {"user_id": str(interaction.user.id), "ticket_id": str(interaction.channel.id), "used_at": iso_now()}
@@ -709,18 +795,15 @@ class PaysafeCodeModal(discord.ui.Modal, title="Paste your Paysafecard code here
         data["paysafe_submitted"] = True; data["status"] = "reviewing"
         await codes_channel.send(content=f"<@&{STAFF_ROLE_ID}> New paysafecard code.", embed=discord.Embed(title="💳 Code", description=f"**Buyer:** {interaction.user.mention}\n**Codes:**\n" + "\n".join(f"`{c}`" for c in new_codes), color=COLOR_WARN))
         await interaction.channel.send(embed=discord.Embed(title="💳 Paysafecard Submitted", description=f"{premium_divider()}\nSent to staff successfully.\n{premium_divider()}", color=COLOR_SUCCESS))
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("Sent to staff.", ephemeral=True)
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("Sent to staff.", ephemeral=True)
 
 class AmazonCodeModal(discord.ui.Modal, title="Paste your Amazon code here"):
     amazon_code = discord.ui.TextInput(label="Amazon Code", required=True, max_length=200, style=discord.TextStyle.paragraph)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
-        data = ticket_data.get(interaction.channel.id)
-        codes_channel = interaction.guild.get_channel(AMAZON_CODES_CHANNEL_ID)
-        found_codes = extract_possible_amazon_codes(str(self.amazon_code).strip()) or [str(self.amazon_code).strip().upper()]
-        new_codes = []
+        data = ticket_data.get(interaction.channel.id); codes_channel = interaction.guild.get_channel(AMAZON_CODES_CHANNEL_ID)
+        found_codes = extract_possible_amazon_codes(str(self.amazon_code).strip()) or [str(self.amazon_code).strip().upper()]; new_codes = []
         for code in list(dict.fromkeys(found_codes)):
             if code not in used_amazon_db and code not in forwarded_amazon_codes.setdefault(interaction.channel.id, []):
                 used_amazon_db[code] = {"user_id": str(interaction.user.id), "ticket_id": str(interaction.channel.id), "used_at": iso_now()}
@@ -730,8 +813,7 @@ class AmazonCodeModal(discord.ui.Modal, title="Paste your Amazon code here"):
         data["amazon_submitted"] = True; data["status"] = "reviewing"
         await codes_channel.send(content=f"<@&{STAFF_ROLE_ID}> New Amazon code.", embed=discord.Embed(title="🎁 Code", description=f"**Buyer:** {interaction.user.mention}\n**Codes:**\n" + "\n".join(f"`{c}`" for c in new_codes), color=COLOR_WARN))
         await interaction.channel.send(embed=discord.Embed(title="🎁 Amazon Submitted", description=f"{premium_divider()}\nSent to staff successfully.\n{premium_divider()}", color=COLOR_SUCCESS))
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("Sent to staff.", ephemeral=True)
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("Sent to staff.", ephemeral=True)
 
 class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
     key_input = discord.ui.TextInput(label="Key", required=True, max_length=100)
@@ -750,12 +832,9 @@ class ExtendModal(discord.ui.Modal, title="Extend Access"):
         if duration is None: return await interaction.response.send_message("Invalid format.", ephemeral=True)
         uid = str(self.target_user_id)
         if uid not in redeemed_db: return await interaction.response.send_message("No active redeem entry.", ephemeral=True)
-        old_exp = redeemed_db[uid].get("expires_at")
-        now = now_utc()
-        base = datetime.fromisoformat(old_exp) if old_exp and datetime.fromisoformat(old_exp) >= now else now
+        old_exp = redeemed_db[uid].get("expires_at"); now = now_utc(); base = datetime.fromisoformat(old_exp) if old_exp and datetime.fromisoformat(old_exp) >= now else now
         new_exp = (base + duration).isoformat()
-        redeemed_db[uid].update({"expires_at": new_exp, "expiry_reminder_sent": False})
-        save_json(REDEEMED_FILE, redeemed_db)
+        redeemed_db[uid].update({"expires_at": new_exp, "expiry_reminder_sent": False}); save_json(REDEEMED_FILE, redeemed_db)
         member = interaction.guild.get_member(self.target_user_id)
         if member: await dm_user_safe(member, embed=discord.Embed(title="⏳ Access Extended", description=f"New expiry: {format_expiry(new_exp)}", color=COLOR_SUCCESS))
         await interaction.response.send_message("Access extended.", ephemeral=True)
@@ -778,10 +857,8 @@ class CloseConfirmView(discord.ui.View):
     def __init__(self): super().__init__(timeout=60)
     @discord.ui.button(label="Confirm Close", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def confirm_close(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("Closing ticket...", ephemeral=True)
-        await delete_admin_panel_message(interaction.guild, interaction.channel.id)
-        ticket_data.pop(interaction.channel.id, None)
-        await asyncio.sleep(2); await interaction.channel.delete()
+        await interaction.response.send_message("Closing ticket...", ephemeral=True); await delete_admin_panel_message(interaction.guild, interaction.channel.id)
+        ticket_data.pop(interaction.channel.id, None); await asyncio.sleep(2); await interaction.channel.delete()
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="↩️")
     async def cancel_close(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.edit_message(content="Close cancelled.", view=None)
 
@@ -796,42 +873,28 @@ class TicketManageView(discord.ui.View):
 
 class ProductSelect(discord.ui.Select):
     def __init__(self):
-        options = [
-            discord.SelectOption(label="1 Day", description="5€", value="day_1", emoji="📅"),
-            discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"),
-            discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️"),
-        ]
+        options = [discord.SelectOption(label="1 Day", description="5€", value="day_1", emoji="📅"), discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"), discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️")]
         super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options, custom_id="buy_product_select")
     async def callback(self, interaction: discord.Interaction):
         data = ticket_data.get(interaction.channel.id)
         if interaction.user.id != data["user_id"] and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("No permission.", ephemeral=True)
         data["product_key"] = self.values[0]
         embed = discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected\nPrice: **{format_price(get_price(self.values[0], interaction.user))}€**\n\nNow choose your payment method below.", color=COLOR_INFO)
-        await interaction.response.send_message(embed=embed, view=PaymentSelectView())
-        await update_payment_summary_message(interaction.channel)
+        await interaction.response.send_message(embed=embed, view=PaymentSelectView()); await update_payment_summary_message(interaction.channel)
 
 class ProductSelectView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(ProductSelect())
 
 class PaymentSelect(discord.ui.Select):
     def __init__(self):
-        options = [
-            discord.SelectOption(label="PayPal", value="paypal", emoji="💸"),
-            discord.SelectOption(label="Litecoin", value="litecoin", emoji="🪙"),
-            discord.SelectOption(label="Ethereum", value="ethereum", emoji="🔷"),
-            discord.SelectOption(label="Solana", value="solana", emoji="🟣"),
-            discord.SelectOption(label="Paysafecard", value="paysafecard", emoji="💳"),
-            discord.SelectOption(label="Amazon Card", value="amazoncard", emoji="🎁"),
-        ]
+        options = [discord.SelectOption(label="PayPal", value="paypal", emoji="💸"), discord.SelectOption(label="Litecoin", value="litecoin", emoji="🪙"), discord.SelectOption(label="Ethereum", value="ethereum", emoji="🔷"), discord.SelectOption(label="Solana", value="solana", emoji="🟣"), discord.SelectOption(label="Paysafecard", value="paysafecard", emoji="💳"), discord.SelectOption(label="Amazon Card", value="amazoncard", emoji="🎁")]
         super().__init__(placeholder="💳 Choose payment method", min_values=1, max_values=1, options=options, custom_id="buy_payment_select")
     async def callback(self, interaction: discord.Interaction):
         data = ticket_data.get(interaction.channel.id)
         if interaction.user.id != data["user_id"] and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("No permission.", ephemeral=True)
-        data["payment_key"] = self.values[0]
-        buyer = interaction.guild.get_member(data["user_id"])
+        data["payment_key"] = self.values[0]; buyer = interaction.guild.get_member(data["user_id"])
         ltc_price = await fetch_ltc_price_eur() if self.values[0] == "litecoin" else None
-        await interaction.response.send_message(embed=build_order_summary(data["product_key"], self.values[0], buyer, ltc_price), view=PaymentActionView(owner_id=data["user_id"]))
-        await update_payment_summary_message(interaction.channel)
+        await interaction.response.send_message(embed=build_order_summary(data["product_key"], self.values[0], buyer, ltc_price), view=PaymentActionView(owner_id=data["user_id"])); await update_payment_summary_message(interaction.channel)
 
 class PaymentSelectView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(PaymentSelect())
@@ -849,27 +912,21 @@ class BuySetupView(discord.ui.View):
 
 class PaymentActionView(discord.ui.View):
     def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
-    
     @discord.ui.button(label="Promo Code einlösen", style=discord.ButtonStyle.secondary, emoji="🎟️", custom_id="apply_promo_button")
     async def apply_promo(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
         await interaction.response.send_modal(PromoCodeModal(owner_id=self.owner_id))
-
     @discord.ui.button(label="Payment Sent", style=discord.ButtonStyle.success, emoji="✅", custom_id="payment_sent_button")
     async def payment_sent(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
-        data = ticket_data.get(interaction.channel.id)
-        data["status"] = "reviewing"
-        buyer = interaction.guild.get_member(data["user_id"])
+        data = ticket_data.get(interaction.channel.id); data["status"] = "reviewing"; buyer = interaction.guild.get_member(data["user_id"])
         review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         embed = discord.Embed(title="🧾 New Payment Review", description=f"Buyer: {buyer.mention}\nTicket: {interaction.channel.mention}", color=COLOR_WARN)
         if isinstance(review_channel, discord.TextChannel): await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> New payment to review.", embed=embed, view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=buyer.id))
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("Payment marked as sent. Staff notified.", ephemeral=True)
-    
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("Payment marked as sent. Staff notified.", ephemeral=True)
     @discord.ui.button(label="Submit LTC TXID", style=discord.ButtonStyle.primary, emoji="🪙", custom_id="submit_txid_button")
     async def submit_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(LitecoinTxidModal(owner_id=self.owner_id))
-    @discord.ui.button(label="Submit Crypto TXID (ETH/SOL)", style=discord.ButtonStyle.primary, emoji="🔗", custom_id="submit_generic_txid_button")
+    @discord.ui.button(label="Submit Crypto TXID", style=discord.ButtonStyle.primary, emoji="🔗", custom_id="submit_generic_txid_button")
     async def submit_generic_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(GenericCryptoTxidModal(owner_id=self.owner_id))
     @discord.ui.button(label="Submit Paysafecard", style=discord.ButtonStyle.secondary, emoji="💳", custom_id="submit_paysafe_button")
     async def submit_paysafe(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(PaysafeCodeModal(owner_id=self.owner_id))
@@ -896,8 +953,7 @@ class AdminPanelView(discord.ui.View):
         if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
         latest = find_user_latest_key(self.owner_id)
         if not latest: return await interaction.response.send_message("No key found.", ephemeral=True)
-        key, data = latest
-        buyer = interaction.guild.get_member(self.owner_id)
+        key, data = latest; buyer = interaction.guild.get_member(self.owner_id)
         if buyer: await dm_user_safe(buyer, embed=discord.Embed(title="🔁 Your Key Was Resent", description=f"**Key:** `{key}`", color=COLOR_INFO))
         await interaction.response.send_message("Key resent.", ephemeral=True)
     @discord.ui.button(label="Extend", style=discord.ButtonStyle.secondary, emoji="⏳", custom_id="adminpanel_extend")
@@ -905,8 +961,7 @@ class AdminPanelView(discord.ui.View):
     @discord.ui.button(label="Blacklist", style=discord.ButtonStyle.secondary, emoji="🚫", custom_id="adminpanel_blacklist")
     async def blacklist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
-        blacklist_db[str(self.owner_id)] = {"reason": "Added from admin panel", "added_by": str(interaction.user.id), "added_at": iso_now()}
-        save_json(BLACKLIST_FILE, blacklist_db)
+        blacklist_db[str(self.owner_id)] = {"reason": "Added from admin panel", "added_by": str(interaction.user.id), "added_at": iso_now()}; save_json(BLACKLIST_FILE, blacklist_db)
         await interaction.response.send_message("User blacklisted.", ephemeral=True)
     @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="adminpanel_close")
     async def close_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -916,31 +971,19 @@ class AdminPanelView(discord.ui.View):
 class ReviewView(discord.ui.View):
     def __init__(self, target_channel_id: int, buyer_id: int): super().__init__(timeout=None); self.target_channel_id = target_channel_id; self.buyer_id = buyer_id
     async def _approve_logic(self, interaction: discord.Interaction):
-        channel = interaction.guild.get_channel(self.target_channel_id)
-        data = ticket_data.get(self.target_channel_id)
-        buyer = interaction.guild.get_member(self.buyer_id)
-        invoice_id = build_invoice_id()
-        data["invoice_id"] = invoice_id
-        data["status"] = "approved"
+        channel = interaction.guild.get_channel(self.target_channel_id); data = ticket_data.get(self.target_channel_id); buyer = interaction.guild.get_member(self.buyer_id)
+        invoice_id = build_invoice_id(); data["invoice_id"] = invoice_id; data["status"] = "approved"
         
         promo_code = data.get("applied_promo")
         promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-        if promo_code and promo_code in promos_db:
-            promos_db[promo_code]["uses"] -= 1
-            save_json(PROMOS_FILE, promos_db)
+        if promo_code and promo_code in promos_db: promos_db[promo_code]["uses"] -= 1; save_json(PROMOS_FILE, promos_db)
 
-        generated_key = generate_key(data["product_key"], ticket_id=self.target_channel_id)
-        keys_db[generated_key]["bound_user_id"] = str(buyer.id)
-        save_json(KEYS_FILE, keys_db)
-        
+        generated_key = generate_key(data["product_key"], ticket_id=self.target_channel_id); keys_db[generated_key]["bound_user_id"] = str(buyer.id); save_json(KEYS_FILE, keys_db)
         final_price = get_price(data["product_key"], buyer, promo_discount)
         create_invoice_record(invoice_id, buyer.id, data["product_key"], data["payment_key"], generated_key, self.target_channel_id, final_price, is_reseller(buyer))
         
         invoice_embed = build_invoice_embed(invoice_id, buyer, data["product_key"], data["payment_key"], final_price, is_reseller(buyer))
-        await channel.send(embed=invoice_embed)
-        await channel.send(embed=build_key_delivery_embed(data["product_key"], generated_key))
-        await update_payment_summary_message(channel)
-        
+        await channel.send(embed=invoice_embed); await channel.send(embed=build_key_delivery_embed(data["product_key"], generated_key)); await update_payment_summary_message(channel)
         if buyer: await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
         await interaction.response.send_message("Approved and Key generated.", ephemeral=True)
 
@@ -948,8 +991,7 @@ class ReviewView(discord.ui.View):
         channel = interaction.guild.get_channel(self.target_channel_id)
         await channel.send(embed=discord.Embed(title="❌ Denied", description="Payment was denied.", color=COLOR_DENY))
         if self.target_channel_id in ticket_data: ticket_data[self.target_channel_id]["status"] = "denied"
-        await update_payment_summary_message(channel)
-        await interaction.response.send_message("Payment denied.", ephemeral=True)
+        await update_payment_summary_message(channel); await interaction.response.send_message("Payment denied.", ephemeral=True)
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️", custom_id="review_approve_button")
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button): await self._approve_logic(interaction)
@@ -977,7 +1019,6 @@ async def check_expired_roles():
     guild = bot.get_guild(GUILD_ID)
     if not guild: return
     current_time = now_utc(); changed = False
-
     for user_id, data in list(redeemed_db.items()):
         if not data.get("expires_at"): continue
         try: expire_time = datetime.fromisoformat(data["expires_at"])
@@ -1005,20 +1046,31 @@ async def check_expired_roles():
 @commands.has_permissions(administrator=True)
 async def sync_commands(ctx):
     await ctx.send("Synchronisiere Slash-Commands... ⏳")
-    try:
-        bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        await ctx.send(f"✅ Erfolgreich {len(synced)} Slash-Commands synchronisiert! Drücke STRG+R.")
+    try: bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)); synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID)); await ctx.send(f"✅ {len(synced)} Slash-Commands synchronisiert! Drücke STRG+R.")
     except Exception as e: await ctx.send(f"❌ Fehler:\n```py\n{e}\n```")
+
+# 🔐 NEU: GENERIERT DEN WEBSITE LOGIN KEY
+@bot.tree.command(name="gen_website_key", description="Generiert einen Admin-Key für das Web Dashboard")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def gen_website_key(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
+    new_key = f"VALE-ADMIN-{random_block(6)}"
+    webkeys_db[new_key] = {"created_by": str(interaction.user.id), "created_at": iso_now()}
+    save_json(WEBKEYS_FILE, webkeys_db)
+    
+    target_ch = interaction.guild.get_channel(WEB_KEY_CHANNEL_ID)
+    if target_ch:
+        await target_ch.send(embed=discord.Embed(title="🔐 Neuer Web-Admin Key", description=f"**Erstellt von:** {interaction.user.mention}\n**Key:** `{new_key}`\n\nNutze diesen Key, um dich in dein Railway-Dashboard einzuloggen.", color=COLOR_INFO))
+        await interaction.response.send_message(f"Key generiert und in {target_ch.mention} gesendet.", ephemeral=True)
+    else:
+        await interaction.response.send_message(f"Kanal nicht gefunden. Hier dein Key: `{new_key}`", ephemeral=True)
 
 @bot.tree.command(name="create_promo", description="Erstelle einen Rabattcode")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def create_promo(interaction: discord.Interaction, code: str, discount_prozent: int, max_uses: int):
     if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
-    code = code.upper()
-    promos_db[code] = {"discount": discount_prozent, "uses": max_uses, "created_by": str(interaction.user.id)}
-    save_json(PROMOS_FILE, promos_db)
-    await interaction.response.send_message(f"✅ Promo `{code}` erstellt! Rabatt: {discount_prozent}%, Nutzungen: {max_uses}", ephemeral=True)
+    code = code.upper(); promos_db[code] = {"discount": discount_prozent, "uses": max_uses, "created_by": str(interaction.user.id)}
+    save_json(PROMOS_FILE, promos_db); await interaction.response.send_message(f"✅ Promo `{code}` erstellt! Rabatt: {discount_prozent}%, Nutzungen: {max_uses}", ephemeral=True)
 
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
@@ -1030,84 +1082,26 @@ async def send_redeem_panel(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     await interaction.response.send_message(embed=build_redeem_panel_embed(), view=RedeemPanelView())
 
-@bot.tree.command(name="invoice_lookup", description="Lookup an invoice by ID")
-@app_commands.guilds(discord.Object(id=GUILD_ID))
-async def invoice_lookup(interaction: discord.Interaction, invoice_id: str):
-    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
-    data = invoices_db.get(invoice_id.strip().upper())
-    if not data: return await interaction.response.send_message("Invoice not found.", ephemeral=True)
-    buyer = interaction.guild.get_member(int(data["buyer_id"]))
-    embed = discord.Embed(title="🧾 Invoice Lookup", color=COLOR_INFO)
-    embed.add_field(name="Invoice ID", value=f"`{invoice_id.strip().upper()}`", inline=False); embed.add_field(name="Buyer", value=buyer.mention if buyer else data["buyer_id"], inline=True); embed.add_field(name="Product", value=PRODUCTS[data["product_type"]]["label"], inline=True)
-    embed.add_field(name="Price", value=f"{format_price(float(data.get('final_price_eur', PRODUCTS[data['product_type']]['price_eur'])))}€", inline=True)
-    embed.add_field(name="Method", value=PAYMENTS[data["payment_key"]]["label"], inline=True); embed.add_field(name="Key", value=f"`{data['key']}`", inline=False); embed.add_field(name="Created", value=data["created_at"], inline=True)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-@bot.tree.command(name="resend_key", description="Resend a user's latest key")
-@app_commands.guilds(discord.Object(id=GUILD_ID))
-async def resend_key(interaction: discord.Interaction, user: discord.Member):
-    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
-    latest = find_user_latest_key(user.id)
-    if not latest: return await interaction.response.send_message("No key found.", ephemeral=True)
-    key, data = latest
-    await dm_user_safe(user, embed=discord.Embed(title="🔁 Your Key Was Resent", description=f"**Product:** {PRODUCTS[data['type']]['label']}\n**Key:** `{key}`", color=COLOR_INFO))
-    await interaction.response.send_message(f"Key resent to {user.mention}.", ephemeral=True)
-
-@bot.tree.command(name="extend", description="Extend a user's access")
-@app_commands.guilds(discord.Object(id=GUILD_ID))
-async def extend(interaction: discord.Interaction, user: discord.Member, duration: str):
-    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
-    td = parse_duration_string(duration)
-    if td is None: return await interaction.response.send_message("Invalid duration. Use: 1d, 7d, 12h", ephemeral=True)
-    uid = str(user.id)
-    if uid not in redeemed_db: return await interaction.response.send_message("No active redeem entry.", ephemeral=True)
-    base = datetime.fromisoformat(redeemed_db[uid]["expires_at"]) if redeemed_db[uid].get("expires_at") and datetime.fromisoformat(redeemed_db[uid]["expires_at"]) >= now_utc() else now_utc()
-    new_exp = (base + td).isoformat()
-    redeemed_db[uid].update({"expires_at": new_exp, "expiry_reminder_sent": False}); save_json(REDEEMED_FILE, redeemed_db)
-    await dm_user_safe(user, embed=discord.Embed(title="⏳ Access Extended", description=f"New expiry: {format_expiry(new_exp)}", color=COLOR_SUCCESS))
-    await interaction.response.send_message(f"Extended {user.mention} until {format_expiry(new_exp)}", ephemeral=True)
-
-@bot.tree.command(name="blacklist_add", description="Blacklist a user")
-@app_commands.guilds(discord.Object(id=GUILD_ID))
-async def blacklist_add(interaction: discord.Interaction, user: discord.Member, reason: str):
-    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
-    blacklist_db[str(user.id)] = {"reason": reason, "added_by": str(interaction.user.id), "added_at": iso_now()}
-    save_json(BLACKLIST_FILE, blacklist_db)
-    await interaction.response.send_message(f"{user.mention} blacklisted. Reason: {reason}", ephemeral=True)
-
-@bot.tree.command(name="blacklist_remove", description="Remove a user from blacklist")
-@app_commands.guilds(discord.Object(id=GUILD_ID))
-async def blacklist_remove(interaction: discord.Interaction, user: discord.Member):
-    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
-    if str(user.id) in blacklist_db:
-        del blacklist_db[str(user.id)]; save_json(BLACKLIST_FILE, blacklist_db)
-        await interaction.response.send_message(f"{user.mention} removed from blacklist.", ephemeral=True)
-    else: await interaction.response.send_message("User is not blacklisted.", ephemeral=True)
-
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du? (1-5)", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
-@app_commands.choices(sterne=[
-    app_commands.Choice(name="⭐⭐⭐⭐⭐ (5/5)", value=5), app_commands.Choice(name="⭐⭐⭐⭐ (4/5)", value=4),
-    app_commands.Choice(name="⭐⭐⭐ (3/5)", value=3), app_commands.Choice(name="⭐⭐ (2/5)", value=2), app_commands.Choice(name="⭐ (1/5)", value=1)
-])
+@app_commands.choices(sterne=[app_commands.Choice(name="⭐⭐⭐⭐⭐ (5/5)", value=5), app_commands.Choice(name="⭐⭐⭐⭐ (4/5)", value=4), app_commands.Choice(name="⭐⭐⭐ (3/5)", value=3), app_commands.Choice(name="⭐⭐ (2/5)", value=2), app_commands.Choice(name="⭐ (1/5)", value=1)])
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[int], produkt: str, bewertung: str):
     ch = interaction.guild.get_channel(VOUCH_CHANNEL_ID)
     if not isinstance(ch, discord.TextChannel): return await interaction.response.send_message("Vouch-Kanal nicht konfiguriert.", ephemeral=True)
     embed = discord.Embed(title=f"Neue Bewertung: {sterne.name}", description=f'"{bewertung}"', color=0xFFD700)
-    embed.add_field(name="👤 Käufer", value=interaction.user.mention, inline=True); embed.add_field(name="📦 Produkt", value=f"`{produkt}`", inline=True)
-    embed.set_thumbnail(url=interaction.user.display_avatar.url)
+    embed.add_field(name="👤 Käufer", value=interaction.user.mention, inline=True); embed.add_field(name="📦 Produkt", value=f"`{produkt}`", inline=True); embed.set_thumbnail(url=interaction.user.display_avatar.url)
     await ch.send(embed=embed); await interaction.response.send_message("✅ Danke für deine Bewertung!", ephemeral=True)
 
 @bot.tree.command(name="send_rules", description="Postet das Regelwerk in den aktuellen Kanal")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_rules(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
-    embed = discord.Embed(title="📜 Server Rules", description="**1. Be Respectful**\nBehandel alle Mitglieder mit Respekt. Keine Beleidigungen, kein Rassismus, kein Spam.\n\n**2. No DM Advertising**\nKeine Werbung für andere Server oder Dienste in den DMs unserer Nutzer.\n\n**3. Support & Tickets**\nBitte eröffne für alle Anfragen oder Käufe ein Ticket im <#1490336321913356459> Bereich. Kein Support in normalen Chats.\n\n**4. Scam & Fraud**\nBetrugsversuche beim Kauf führen zu einem permanenten Ban und Blacklist.", color=COLOR_WELCOME)
+    embed = discord.Embed(title="📜 Server Rules", description="**1. Be Respectful**\nBehandel alle Mitglieder mit Respekt.\n\n**2. No DM Advertising**\nKeine Werbung für andere Server.\n\n**3. Support & Tickets**\nBitte eröffne ein Ticket im Support-Bereich.\n\n**4. Scam & Fraud**\nBetrugsversuche führen zu permanentem Ban.", color=COLOR_WELCOME)
     embed.set_image(url=WELCOME_BANNER_URL)
     await interaction.channel.send(embed=embed); await interaction.response.send_message("Regelwerk erfolgreich gepostet!", ephemeral=True)
 
-@bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht (Simuliert einen Join)")
+@bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def test_welcome(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
@@ -1118,40 +1112,22 @@ async def test_welcome(interaction: discord.Interaction):
 # =========================================================
 @bot.event
 async def on_ready():
-    global keys_db, redeemed_db, used_txids_db, used_paysafe_db, used_amazon_db, blacklist_db, invoices_db, promos_db
-
-    keys_db = load_json(KEYS_FILE, {})
-    redeemed_db = load_json(REDEEMED_FILE, {})
-    used_txids_db = load_json(USED_TXIDS_FILE, {})
-    used_paysafe_db = load_json(USED_PAYSAFE_FILE, {})
-    used_amazon_db = load_json(USED_AMAZON_FILE, {})
-    blacklist_db = load_json(BLACKLIST_FILE, {})
-    invoices_db = load_json(INVOICES_FILE, {})
-    promos_db = load_json(PROMOS_FILE, {})
+    global keys_db, redeemed_db, used_txids_db, used_paysafe_db, used_amazon_db, blacklist_db, invoices_db, promos_db, webkeys_db, activity_db
+    keys_db = load_json(KEYS_FILE, {}); redeemed_db = load_json(REDEEMED_FILE, {}); used_txids_db = load_json(USED_TXIDS_FILE, {})
+    used_paysafe_db = load_json(USED_PAYSAFE_FILE, {}); used_amazon_db = load_json(USED_AMAZON_FILE, {}); blacklist_db = load_json(BLACKLIST_FILE, {})
+    invoices_db = load_json(INVOICES_FILE, {}); promos_db = load_json(PROMOS_FILE, {}); webkeys_db = load_json(WEBKEYS_FILE, {})
+    activity_db = load_json(ACTIVITY_FILE, [])
 
     print("Bot is starting...")
     bot.loop.create_task(start_web_server())
 
-    print(f"Logged in as: {bot.user} ({bot.user.id})")
-    
-    bot.add_view(MainTicketPanelView())
-    bot.add_view(RedeemPanelView())
-    bot.add_view(TicketManageView(owner_id=0))
-    bot.add_view(BuySetupView(owner_id=0))
-    bot.add_view(PaymentActionView(owner_id=0))
-    bot.add_view(PaymentSummaryView())
-    bot.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0))
-    bot.add_view(ReviewView(target_channel_id=0, buyer_id=0))
+    bot.add_view(MainTicketPanelView()); bot.add_view(RedeemPanelView()); bot.add_view(TicketManageView(owner_id=0))
+    bot.add_view(BuySetupView(owner_id=0)); bot.add_view(PaymentActionView(owner_id=0)); bot.add_view(PaymentSummaryView())
+    bot.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0)); bot.add_view(ReviewView(target_channel_id=0, buyer_id=0))
 
     if not check_expired_roles.is_running(): check_expired_roles.start()
-
-    try:
-        bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"✅ FORCED SYNC ERFOLGREICH: {len(synced)} Command(s) an Guild {GUILD_ID} gesendet!")
-    except Exception as e:
-        print(f"❌ Slash command sync error: {e}")
-
-    print("Bot is ready.")
+    try: bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)); await bot.tree.sync(guild=discord.Object(id=GUILD_ID)); print("✅ SYNC ERFOLGREICH!")
+    except Exception as e: print(f"❌ Slash command sync error: {e}")
+    print(f"Bot is ready. Logged in as: {bot.user}")
 
 bot.run(TOKEN)
