@@ -44,7 +44,7 @@ VOUCH_CHANNEL_ID = 123456789012345678  # ⚠️ ERSETZE DIES durch deine Vouch-K
 REDEEM_ROLE_ID = 1490321899266506913
 RESELLER_ROLE_ID = 1490335130890534923
 
-PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/1487826817925513306/ChatGPT_Image_29._Marz_2026_16_52_23.png?ex=69ca8e33&is=69c93cb3&hm=b6766c8395cf04ce0015cbdb05382f5ef1d51c3bb16e443dce33c5bc708b33c8&=&format=webp&quality=lossless&width=636&height=636"
+PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490329787976253510/1490371088494887053/asdawdwaw.jpg?ex=69d3cfbd&is=69d27e3d&hm=2002f406c99904440eff8662415e9ce8e46d5a64b9cb5da5fe7d43660c0f449f&=&format=webp&width=652&height=652"
 
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
