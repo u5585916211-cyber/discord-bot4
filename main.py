@@ -50,7 +50,7 @@ REDEEM_ROLE_ID = 1490321899266506913
 RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
-WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548"
+WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d3cfcd&is=69d27e4d&hm=168f0fdba0376421e2a18ad6f421112517035adb2f0711d5c658521f9320c8b6&=&format=webp&width=548&height=548"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d3cfcd&is=69d27e4d&hm=168f0fdba0376421e2a18ad6f421112517035adb2f0711d5c658521f9320c8b6&=&format=webp&width=548&height=548"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/1487826817925513306/ChatGPT_Image_29._Marz_2026_16_52_23.png?ex=69ca8e33&is=69c93cb3&hm=b6766c8395cf04ce0015cbdb05382f5ef1d51c3bb16e443dce33c5bc708b33c8&=&format=webp&quality=lossless&width=636&height=636"
 
