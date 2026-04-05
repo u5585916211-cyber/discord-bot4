@@ -45,7 +45,7 @@ RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
 # ⚠️ TRAGE HIER DEN DISCORD-BILD-LINK VON DEINEM LILA LOGO EIN FÜR DIE WEBSITE!
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png" 
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548" 
 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
