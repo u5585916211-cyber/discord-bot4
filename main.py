@@ -54,6 +54,7 @@ PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
 
 LTC_MIN_CONFIRMATIONS = 1
+EXPIRY_REMINDER_HOURS = 12
 
 # =========================================================
 # COLORS & FILES
@@ -67,8 +68,7 @@ KEYS_FILE = "keys.json"; REDEEMED_FILE = "redeemed.json"
 USED_TXIDS_FILE = "used_txids.json"; USED_PAYSAFE_FILE = "used_paysafecodes.json"
 USED_AMAZON_FILE = "used_amazoncodes.json"; BLACKLIST_FILE = "blacklist.json"
 INVOICES_FILE = "invoices.json"; PROMOS_FILE = "promos.json"
-WEBKEYS_FILE = "web_keys.json" # Speichert die Admin-Keys für die Website
-ACTIVITY_FILE = "activity.json"
+WEBKEYS_FILE = "web_keys.json"; ACTIVITY_FILE = "activity.json"
 
 PRODUCTS = {
     "day_1": {"label": "1 Day", "price_eur": 5, "duration": timedelta(days=1), "key_prefix": "GEN-1D"},
@@ -97,7 +97,7 @@ def save_json(path, data):
 def log_activity(action, user="System"):
     global activity_db
     activity_db.insert(0, {"time": iso_now(), "user": str(user), "action": action})
-    activity_db = activity_db[:50] # Nur die letzten 50 speichern
+    activity_db = activity_db[:50]
     save_json(ACTIVITY_FILE, activity_db)
 
 # =========================================================
@@ -121,7 +121,6 @@ DASHBOARD_HTML = """
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scrollbar styling */
         ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0f111a; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
@@ -169,17 +168,14 @@ DASHBOARD_HTML = """
                 
                 <div id="tab-dashboard" class="tab-content active">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-purple-500">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p>
-                            <h3 class="text-4xl font-black text-white mt-1" id="stat-rev">0.00€</h3>
+                        <div class="glass-panel p-6 rounded-2xl border-t-2 border-t-purple-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p><h3 class="text-4xl font-black text-white mt-1" id="stat-rev">0.00€</h3>
                         </div>
-                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-blue-500">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p>
-                            <h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3>
+                        <div class="glass-panel p-6 rounded-2xl border-t-2 border-t-blue-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p><h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3>
                         </div>
-                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-2 border-t-emerald-500">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p>
-                            <h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3>
+                        <div class="glass-panel p-6 rounded-2xl border-t-2 border-t-emerald-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p><h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3>
                         </div>
                     </div>
                     
@@ -218,15 +214,9 @@ DASHBOARD_HTML = """
                     </div>
                     <div id="lookup-result" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white">0.00€</h3>
-                            </div>
-                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
-                            </div>
-                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-red-500">
-                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold text-white mt-2">Clean</h3>
-                            </div>
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500"><p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white">0.00€</h3></div>
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500"><p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3></div>
+                            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-red-500"><p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold text-white mt-2">Clean</h3></div>
                         </div>
                         <div class="glass-panel rounded-2xl overflow-hidden"><div class="p-4 border-b border-gray-800 font-bold">Purchase History</div><table class="w-full text-left text-sm"><thead class="text-gray-400 border-b border-gray-800"><tr><th class="p-4">Invoice</th><th class="p-4">Product</th><th class="p-4">Price</th><th class="p-4">Date</th></tr></thead><tbody id="lu-table" class="divide-y divide-gray-800"></tbody></table></div>
                     </div>
@@ -261,7 +251,6 @@ DASHBOARD_HTML = """
     <script>
         let myChart = null;
 
-        // --- AUTH SYSTEM ---
         function getHeaders() { return {'Authorization': 'Bearer ' + localStorage.getItem('admin_key'), 'Content-Type': 'application/json'}; }
         function logout() { localStorage.removeItem('admin_key'); location.reload(); }
         
@@ -284,7 +273,6 @@ DASHBOARD_HTML = """
             else { document.getElementById('login-overlay').classList.remove('hidden'); document.getElementById('app-layout').classList.add('hidden'); }
         }
 
-        // --- APP LOGIC ---
         function initApp() {
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('hidden');
@@ -311,42 +299,34 @@ DASHBOARD_HTML = """
             document.getElementById('stat-orders').innerText = data.buyers_today;
             document.getElementById('stat-keys').innerText = data.active_keys;
             
-            // Render Chart
             const ctx = document.getElementById('revenueChart').getContext('2d');
             if(myChart) myChart.destroy();
             myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.chart_labels,
-                    datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', borderWidth: 3, fill: true, tension: 0.4 }]
-                },
+                type: 'line', data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', borderWidth: 3, fill: true, tension: 0.4 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: '#1e293b'}}, x: {grid: {color: '#1e293b'}} } }
             });
         }
 
         async function loadActivity() {
             const data = await fetchAPI('/api/activity');
-            document.getElementById('activity-feed').innerHTML = data.map(a => `
-                <div class="p-3 bg-gray-800/50 rounded-lg border border-gray-700/50 flex justify-between items-center">
-                    <div><span class="font-bold text-gray-300 text-xs mr-2">${a.user}</span><span class="text-sm text-gray-400">${a.action}</span></div>
-                    <span class="text-xs text-gray-600">${a.time.split('T')[1].substring(0,5)}</span>
-                </div>`).join('');
+            document.getElementById('activity-feed').innerHTML = data.map(a => `<div class="p-3 bg-gray-800/50 rounded-lg border border-gray-700/50 flex justify-between items-center"><div><span class="font-bold text-gray-300 text-xs mr-2">${a.user}</span><span class="text-sm text-gray-400">${a.action}</span></div><span class="text-xs text-gray-600">${a.time.split('T')[1].substring(0,5)}</span></div>`).join('');
         }
 
         async function loadPromos() {
             const data = await fetchAPI('/api/promos');
             const tb = document.getElementById('table-promos');
             if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active promos.</td></tr>';
-            tb.innerHTML = Object.entries(data).map(([code, info]) => `
-                <tr class="hover:bg-gray-800/30"><td class="p-4 font-mono font-bold text-indigo-400">${code}</td><td class="p-4 text-emerald-400">-${info.discount}%</td><td class="p-4 text-gray-300">${info.uses}</td>
-                <td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+            tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-gray-800/30"><td class="p-4 font-mono font-bold text-indigo-400">${code}</td><td class="p-4 text-emerald-400">-${info.discount}%</td><td class="p-4 text-gray-300">${info.uses}</td><td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
         }
+
+        // HIER IST DER FIX FÜR DEN PROMO GENERATOR (parseInt statt int)
         async function createPromo() {
             const c=document.getElementById('p-code').value.toUpperCase(), d=document.getElementById('p-disc').value, u=document.getElementById('p-uses').value;
             if(!c||!d||!u) return alert("Fill all fields");
-            await fetchAPI('/api/promos/add', {method:'POST', body:JSON.stringify({code:c, discount:parseInt(d), uses:int(u)})});
+            await fetchAPI('/api/promos/add', {method:'POST', body:JSON.stringify({code:c, discount:parseInt(d), uses:parseInt(u)})});
             document.getElementById('p-code').value=''; document.getElementById('p-disc').value=''; document.getElementById('p-uses').value=''; loadPromos();
         }
+        
         async function rmPromo(code) { await fetchAPI('/api/promos/remove', {method:'POST', body:JSON.stringify({code:code})}); loadPromos(); }
 
         async function loadBlacklist() {
@@ -367,11 +347,9 @@ DASHBOARD_HTML = """
             if(!uid) return;
             const data = await fetchAPI('/api/lookup', {method:'POST', body:JSON.stringify({user_id:uid})});
             document.getElementById('lookup-result').classList.remove('hidden');
-            document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€';
-            document.getElementById('lu-orders').innerText = data.total_orders;
+            document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; document.getElementById('lu-orders').innerText = data.total_orders;
             const b = document.getElementById('lu-banned');
             if(data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-bold text-red-500 mt-2"; } else { b.innerText = "Clean"; b.className = "text-xl font-bold text-emerald-500 mt-2"; }
-            
             const tb = document.getElementById('lu-table');
             if(data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No purchases found.</td></tr>';
             else tb.innerHTML = data.invoices.map(i => `<tr><td class="p-4 font-mono text-xs text-gray-400">${i.id}</td><td class="p-4">${i.product}</td><td class="p-4 font-bold text-emerald-400">${i.price}€</td><td class="p-4 text-xs">${i.date.split('T')[0]}</td></tr>`).join('');
@@ -407,21 +385,16 @@ async def api_auth(request):
 async def api_get_stats(request):
     if not is_authorized(request): return web.Response(status=401)
     now = now_utc(); today_buyers = set(); total_rev = 0.0
-    
-    # Chart Data Calculation (Last 7 Days)
     days = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
     labels = [d.strftime("%a") for d in days]
     rev_data = {d: 0.0 for d in days}
-
     for inv_id, data in invoices_db.items():
-        price = float(data.get("final_price_eur", 0))
-        total_rev += price
+        price = float(data.get("final_price_eur", 0)); total_rev += price
         try:
             d = datetime.fromisoformat(data["created_at"]).date()
             if d == now.date(): today_buyers.add(data["buyer_id"])
             if d in rev_data: rev_data[d] += price
         except: pass
-    
     active_k = sum(1 for k, v in keys_db.items() if not v["used"])
     return web.json_response({"total_revenue": total_rev, "buyers_today": len(today_buyers), "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())})
 
@@ -434,8 +407,7 @@ async def api_promos(request):
     return web.json_response(promos_db)
 async def api_add_promo(request):
     if not is_authorized(request): return web.Response(status=401)
-    d = await request.json()
-    promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}
+    d = await request.json(); promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}
     save_json(PROMOS_FILE, promos_db); log_activity(f"Erstellte Promo {d['code']}")
     return web.json_response({"ok": True})
 async def api_rm_promo(request):
@@ -446,8 +418,7 @@ async def api_rm_promo(request):
 
 async def api_lookup(request):
     if not is_authorized(request): return web.Response(status=401)
-    uid = (await request.json()).get("user_id")
-    spent = 0.0; invs = []
+    uid = (await request.json()).get("user_id"); spent = 0.0; invs = []
     for i_id, data in invoices_db.items():
         if data["buyer_id"] == uid:
             spent += float(data.get("final_price_eur", 0))
@@ -456,13 +427,11 @@ async def api_lookup(request):
 
 async def api_announce(request):
     if not is_authorized(request): return web.Response(status=401)
-    d = await request.json()
-    ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    d = await request.json(); ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
     if ch:
         emb = discord.Embed(title=d["title"], description=d["desc"], color=COLOR_WELCOME)
         if d.get("img"): emb.set_image(url=d["img"])
-        await ch.send(embed=emb)
-        log_activity("Sendete ein Announcement")
+        await ch.send(embed=emb); log_activity("Sendete ein Announcement")
     return web.json_response({"ok": True})
 
 async def api_get_blacklist(request):
@@ -487,7 +456,6 @@ async def start_web_server():
     app.router.add_get('/api/promos', api_promos); app.router.add_post('/api/promos/add', api_add_promo); app.router.add_post('/api/promos/remove', api_rm_promo)
     app.router.add_post('/api/lookup', api_lookup); app.router.add_post('/api/announce', api_announce)
     app.router.add_get('/api/blacklist', api_get_blacklist); app.router.add_post('/api/blacklist/remove', api_remove_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist)
-    
     runner = web.AppRunner(app); await runner.setup()
     port = int(os.environ.get("PORT", 8080)); site = web.TCPSite(runner, '0.0.0.0', port); await site.start()
 
@@ -500,28 +468,22 @@ def premium_divider() -> str: return "━━━━━━━━━━━━━━
 def short_txid(txid: str) -> str: return txid if len(txid) < 20 else f"{txid[:14]}...{txid[-14:]}"
 def random_block(length=4) -> str: return uuid.uuid4().hex[:length].upper()
 def is_blacklisted(user_id: int) -> bool: return str(user_id) in blacklist_db
-
 def format_expiry(expires_at: str | None) -> str:
     if not expires_at: return "Never"
     try: return f"<t:{int(datetime.fromisoformat(expires_at).timestamp())}:F>"
     except: return str(expires_at)
-
 def parse_duration_string(duration_text: str) -> timedelta | None:
-    txt = duration_text.strip().lower()
-    match = re.fullmatch(r"(\d+)([dhw])", txt)
+    match = re.fullmatch(r"(\d+)([dhw])", duration_text.strip().lower())
     if not match: return None
     v, u = int(match.group(1)), match.group(2)
     return timedelta(days=v) if u == "d" else timedelta(hours=v) if u == "h" else timedelta(weeks=v)
-
 def build_invoice_id() -> str: return f"GEN-{uuid.uuid4().hex[:10].upper()}"
 def is_reseller(member: discord.Member | None) -> bool: return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
-
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
     base_price = PRODUCTS[product_key]["price_eur"]
     if is_reseller(member): base_price = round(base_price * 0.5, 2)
     if promo_discount > 0: base_price = round(base_price * (1 - (promo_discount / 100.0)), 2)
     return float(base_price)
-
 def format_price(value: float) -> str: return str(int(value)) if float(value).is_integer() else f"{value:.2f}"
 
 async def dm_user_safe(user: discord.abc.User, content: str = None, embed: discord.Embed = None):
@@ -544,7 +506,6 @@ def create_invoice_record(invoice_id, buyer_id, product_type, payment_key, key, 
 def extract_possible_paysafe_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
 def extract_possible_amazon_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
 def litoshi_to_ltc(value: int) -> float: return value / 100_000_000
-
 def tx_matches_our_address(tx_data: dict, expected_address: str) -> tuple[bool, int]:
     total_received = 0; found = False
     for output in tx_data.get("outputs", []):
@@ -556,18 +517,15 @@ async def fetch_ltc_tx(txid: str):
         async with session.get(f"https://api.blockcypher.com/v1/ltc/main/txs/{txid}", timeout=20) as resp:
             if resp.status != 200: return None, f"API returned {resp.status}"
             return await resp.json(), None
-
 async def fetch_ltc_price_eur():
     async with aiohttp.ClientSession() as session:
         async with session.get("https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=eur", timeout=20) as resp:
             if resp.status != 200: return None
             return (await resp.json()).get("litecoin", {}).get("eur")
-
 async def find_existing_ticket(guild: discord.Guild, user: discord.Member):
     for channel in guild.text_channels:
         if channel.topic == f"ticket_owner:{user.id}": return channel
     return None
-
 def find_user_latest_key(user_id: int):
     user_id = str(user_id); latest_key = None; latest_created = None
     for key, data in keys_db.items():
@@ -596,7 +554,6 @@ def build_order_summary(product_key: str, payment_key: str, user: discord.Member
     product = PRODUCTS[product_key]; payment = PAYMENTS[payment_key]; price = get_price(product_key, user)
     price_header = f"💶 **Price:** {format_price(price)}€"
     if is_reseller(user): price_header += " (**Reseller 50% OFF**)"
-
     if payment_key == "paypal": extra = f"## 💸 PayPal Payment\n**Send payment to:**\n`{PAYPAL_EMAIL}`\n\n**After payment:**\n• Send screenshot / proof in this ticket\n• Click **Payment Sent**"
     elif payment_key == "litecoin":
         extra = f"## 🪙 Litecoin Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{LITECOIN_ADDRESS}`\n\n"
@@ -627,19 +584,14 @@ def build_invoice_embed(invoice_id: str, buyer: discord.Member, product_type: st
 def build_key_delivery_embed(product_type: str, key: str) -> discord.Embed: return discord.Embed(title="🔑 Your Key Has Been Generated", description=f"{premium_divider()}\n**Product:** {PRODUCTS[product_type]['label']}\n**Your Key:**\n`{key}`\n\nGo to the redeem panel and click **Redeem**.\n{premium_divider()}", color=COLOR_SUCCESS)
 
 def build_payment_summary_embed(channel_id: int) -> discord.Embed:
-    data = ticket_data.get(channel_id, {})
-    user = bot.get_guild(GUILD_ID).get_member(data.get("user_id")) if bot.get_guild(GUILD_ID) and data.get("user_id") else None
-    
-    product_key = data.get("product_key")
-    promo_code = data.get("applied_promo")
+    data = ticket_data.get(channel_id, {}); user = bot.get_guild(GUILD_ID).get_member(data.get("user_id")) if bot.get_guild(GUILD_ID) and data.get("user_id") else None
+    product_key = data.get("product_key"); promo_code = data.get("applied_promo")
     promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-    
     if product_key in PRODUCTS:
         price_text = f"{format_price(get_price(product_key, user, promo_discount))}€"
         if is_reseller(user): price_text += " (Reseller)"
         if promo_discount > 0: price_text += f" (Promo -{promo_discount}%)"
     else: price_text = "—"
-
     status_map = {"waiting": "🟡 Waiting", "reviewing": "🟠 Reviewing", "approved": "✅ Approved", "denied": "❌ Denied"}
     embed = discord.Embed(title="📋 Payment Summary", description=f"{premium_divider()}\n**Live order status**\n{premium_divider()}", color=COLOR_INFO)
     embed.add_field(name="Product", value=PRODUCTS[product_key]["label"] if product_key in PRODUCTS else "Not selected", inline=True); embed.add_field(name="Price", value=price_text, inline=True); embed.add_field(name="Method", value=PAYMENTS[data.get("payment_key")]["label"] if data.get("payment_key") in PAYMENTS else "Not selected", inline=True)
@@ -1049,7 +1001,6 @@ async def sync_commands(ctx):
     try: bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)); synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID)); await ctx.send(f"✅ {len(synced)} Slash-Commands synchronisiert! Drücke STRG+R.")
     except Exception as e: await ctx.send(f"❌ Fehler:\n```py\n{e}\n```")
 
-# 🔐 NEU: GENERIERT DEN WEBSITE LOGIN KEY
 @bot.tree.command(name="gen_website_key", description="Generiert einen Admin-Key für das Web Dashboard")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_website_key(interaction: discord.Interaction):
@@ -1081,6 +1032,60 @@ async def ticket(interaction: discord.Interaction): await interaction.response.s
 async def send_redeem_panel(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     await interaction.response.send_message(embed=build_redeem_panel_embed(), view=RedeemPanelView())
+
+@bot.tree.command(name="invoice_lookup", description="Lookup an invoice by ID")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def invoice_lookup(interaction: discord.Interaction, invoice_id: str):
+    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
+    data = invoices_db.get(invoice_id.strip().upper())
+    if not data: return await interaction.response.send_message("Invoice not found.", ephemeral=True)
+    buyer = interaction.guild.get_member(int(data["buyer_id"]))
+    embed = discord.Embed(title="🧾 Invoice Lookup", color=COLOR_INFO)
+    embed.add_field(name="Invoice ID", value=f"`{invoice_id.strip().upper()}`", inline=False); embed.add_field(name="Buyer", value=buyer.mention if buyer else data["buyer_id"], inline=True); embed.add_field(name="Product", value=PRODUCTS[data["product_type"]]["label"], inline=True)
+    embed.add_field(name="Price", value=f"{format_price(float(data.get('final_price_eur', PRODUCTS[data['product_type']]['price_eur'])))}€", inline=True)
+    embed.add_field(name="Method", value=PAYMENTS[data["payment_key"]]["label"], inline=True); embed.add_field(name="Key", value=f"`{data['key']}`", inline=False); embed.add_field(name="Created", value=data["created_at"], inline=True)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="resend_key", description="Resend a user's latest key")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def resend_key(interaction: discord.Interaction, user: discord.Member):
+    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
+    latest = find_user_latest_key(user.id)
+    if not latest: return await interaction.response.send_message("No key found.", ephemeral=True)
+    key, data = latest
+    await dm_user_safe(user, embed=discord.Embed(title="🔁 Your Key Was Resent", description=f"**Product:** {PRODUCTS[data['type']]['label']}\n**Key:** `{key}`", color=COLOR_INFO))
+    await interaction.response.send_message(f"Key resent to {user.mention}.", ephemeral=True)
+
+@bot.tree.command(name="extend", description="Extend a user's access")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def extend(interaction: discord.Interaction, user: discord.Member, duration: str):
+    if not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Staff only.", ephemeral=True)
+    td = parse_duration_string(duration)
+    if td is None: return await interaction.response.send_message("Invalid duration. Use: 1d, 7d, 12h", ephemeral=True)
+    uid = str(user.id)
+    if uid not in redeemed_db: return await interaction.response.send_message("No active redeem entry.", ephemeral=True)
+    base = datetime.fromisoformat(redeemed_db[uid]["expires_at"]) if redeemed_db[uid].get("expires_at") and datetime.fromisoformat(redeemed_db[uid]["expires_at"]) >= now_utc() else now_utc()
+    new_exp = (base + td).isoformat()
+    redeemed_db[uid].update({"expires_at": new_exp, "expiry_reminder_sent": False}); save_json(REDEEMED_FILE, redeemed_db)
+    await dm_user_safe(user, embed=discord.Embed(title="⏳ Access Extended", description=f"New expiry: {format_expiry(new_exp)}", color=COLOR_SUCCESS))
+    await interaction.response.send_message(f"Extended {user.mention} until {format_expiry(new_exp)}", ephemeral=True)
+
+@bot.tree.command(name="blacklist_add", description="Blacklist a user")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def blacklist_add(interaction: discord.Interaction, user: discord.Member, reason: str):
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
+    blacklist_db[str(user.id)] = {"reason": reason, "added_by": str(interaction.user.id), "added_at": iso_now()}
+    save_json(BLACKLIST_FILE, blacklist_db)
+    await interaction.response.send_message(f"{user.mention} blacklisted. Reason: {reason}", ephemeral=True)
+
+@bot.tree.command(name="blacklist_remove", description="Remove a user from blacklist")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def blacklist_remove(interaction: discord.Interaction, user: discord.Member):
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
+    if str(user.id) in blacklist_db:
+        del blacklist_db[str(user.id)]; save_json(BLACKLIST_FILE, blacklist_db)
+        await interaction.response.send_message(f"{user.mention} removed from blacklist.", ephemeral=True)
+    else: await interaction.response.send_message("User is not blacklisted.", ephemeral=True)
 
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du? (1-5)", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
