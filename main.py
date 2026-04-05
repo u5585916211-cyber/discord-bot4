@@ -34,7 +34,7 @@ BUY_CATEGORY_ID = 1490336321913356459
 SUPPORT_CATEGORY_ID = 1490336154044727407
 
 STAFF_ROLE_ID = 1490327988800065597
-REVIEW_CHANNEL_ID = 1490330053836542082
+REVIEW_CHANNEL_ID = 1490334608695361707
 PAYSAFE_CODES_CHANNEL_ID = 1490335565256851466
 AMAZON_CODES_CHANNEL_ID = 1490335639357362298
 INVOICE_CHANNEL_ID = 1490336085568524550
@@ -1974,6 +1974,20 @@ async def check_expired_roles():
 # =========================================================
 # COMMANDS
 # =========================================================
+
+# ----------------- HIER IST DER NEUE SYNC COMMAND -----------------
+@bot.command(name="sync")
+@commands.has_permissions(administrator=True)
+async def sync_commands(ctx):
+    await ctx.send("Synchronisiere Slash-Commands... ⏳")
+    try:
+        bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+        await ctx.send(f"✅ Erfolgreich {len(synced)} Slash-Commands für diesen Server synchronisiert! Drücke jetzt STRG+R in Discord.")
+    except Exception as e:
+        await ctx.send(f"❌ Fehler beim Synchronisieren:\n```py\n{e}\n```")
+# ------------------------------------------------------------------
+
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def ticket(interaction: discord.Interaction):
@@ -2154,6 +2168,7 @@ async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[in
 
     await vouch_channel.send(embed=embed)
     await interaction.response.send_message("✅ Danke für deine Bewertung! Sie wurde im Vouch-Kanal veröffentlicht.", ephemeral=True)
+
 
 # =========================================================
 # READY
