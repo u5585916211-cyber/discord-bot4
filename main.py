@@ -38,7 +38,7 @@ ADMIN_PANEL_CHANNEL_ID = 1490335327619911873
 
 WELCOME_CHANNEL_ID = 1490374553183060090
 RULES_CHANNEL_ID = 1490376004391272498
-VOUCH_CHANNEL_ID = 1490372381791748176 
+VOUCH_CHANNEL_ID = 1490372381791748176
 
 REDEEM_ROLE_ID = 1490321899266506913
 RESELLER_ROLE_ID = 1490335130890534923
@@ -71,7 +71,7 @@ USED_PAYSAFE_FILE = "used_paysafecodes.json"
 USED_AMAZON_FILE = "used_amazoncodes.json"
 BLACKLIST_FILE = "blacklist.json"
 INVOICES_FILE = "invoices.json"
-PROMOS_FILE = "promos.json"  # NEU: Promos Speichern
+PROMOS_FILE = "promos.json"
 
 # =========================================================
 # PRODUCTS & PAYMENTS
@@ -98,25 +98,12 @@ intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-ticket_data = {}
-forwarded_paysafe_codes = {}
-forwarded_amazon_codes = {}
+ticket_data = {}; forwarded_paysafe_codes = {}; forwarded_amazon_codes = {}
+keys_db = {}; redeemed_db = {}; used_txids_db = {}; used_paysafe_db = {}
+used_amazon_db = {}; blacklist_db = {}; invoices_db = {}; promos_db = {}
 
-keys_db = {}
-redeemed_db = {}
-used_txids_db = {}
-used_paysafe_db = {}
-used_amazon_db = {}
-blacklist_db = {}
-invoices_db = {}
-promos_db = {}  # NEU
-
-# =========================================================
-# JSON HELPERS
-# =========================================================
 def load_json(path: str, default):
     if not os.path.exists(path):
         with open(path, "w", encoding="utf-8") as f: json.dump(default, f, indent=4)
@@ -129,94 +116,269 @@ def save_json(path: str, data):
     with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
 
 # =========================================================
-# 🌍 NEU: WEB DASHBOARD & API (RAILWAY)
+# 🌍 HIGH-END WEB DASHBOARD & API
 # =========================================================
 DASHBOARD_HTML = """
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vale Gen | Admin Dashboard</title>
+    <title>Vale Gen | Pro Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        async function loadBlacklist() {
-            const res = await fetch('/api/blacklist');
-            const data = await res.json();
-            const container = document.getElementById('blacklist-content');
-            
-            if (Object.keys(data).length === 0) {
-                container.innerHTML = '<p class="text-gray-500 py-4">Die Blacklist ist leer. Alles sauber! ✨</p>';
-                return;
-            }
-            
-            let html = '<table class="w-full text-left text-gray-300"><thead><tr class="border-b border-gray-700 pb-2 text-gray-400"><th>User ID</th><th>Grund</th><th>Datum</th><th>Aktion</th></tr></thead><tbody>';
-            for (const [uid, info] of Object.entries(data)) {
-                html += `<tr class="border-b border-gray-800"><td class="py-3 font-mono">${uid}</td><td>${info.reason}</td><td class="text-sm text-gray-500">${info.added_at.split('T')[0]}</td>
-                <td><button onclick="removeUser('${uid}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-sm transition font-bold shadow-lg">Entbannen</button></td></tr>`;
-            }
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        async function removeUser(uid) {
-            if(!confirm('Diesen Nutzer wirklich von der Blacklist entfernen?')) return;
-            await fetch('/api/blacklist/remove', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: uid})
-            });
-            loadBlacklist(); // Lädt die Tabelle sofort neu
-        }
-
-        window.onload = loadBlacklist;
-    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f111a; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glow-text { text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-200 p-8 font-sans">
-    <div class="max-w-4xl mx-auto">
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Vale Gen Admin</h1>
-            <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-green-400">API Live</span>
-        </div>
-        
-        <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6">
-            <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-                <span class="mr-2">🚫</span> Blacklist Manager
-            </h2>
-            <div id="blacklist-content" class="bg-gray-900 rounded-lg p-4 border border-gray-700">
-                <p class="text-center text-gray-500 py-4">Lade Datenbankbank...</p>
+<body class="text-gray-200 flex h-screen overflow-hidden">
+
+    <aside class="w-64 glass-panel border-r flex flex-col justify-between hidden md:flex z-10">
+        <div>
+            <div class="h-20 flex items-center justify-center border-b border-gray-700/50">
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 glow-text">
+                    <i class="fa-solid fa-bolt mr-2 text-purple-400"></i>VALE GEN
+                </h1>
             </div>
+            <nav class="p-4 space-y-2 mt-4">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-purple-400 bg-purple-500/10 font-semibold transition">
+                    <i class="fa-solid fa-chart-pie w-6"></i> Overview
+                </button>
+                <button onclick="switchTab('keys')" id="btn-keys" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition">
+                    <i class="fa-solid fa-key w-6"></i> Key Manager
+                </button>
+                <button onclick="switchTab('blacklist')" id="btn-blacklist" class="w-full flex items-center text-left py-3 px-4 rounded-xl text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition">
+                    <i class="fa-solid fa-ban w-6"></i> Blacklist
+                </button>
+            </nav>
         </div>
-    </div>
+        <div class="p-6 border-t border-gray-700/50 text-center text-xs text-gray-500">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> System Online</span>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto relative">
+        <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
+        
+        <header class="h-20 flex items-center justify-between px-8 z-10">
+            <h2 id="page-title" class="text-2xl font-bold text-white">Overview</h2>
+            <div class="flex items-center gap-4">
+                <div class="bg-gray-800 rounded-full py-1 px-4 text-sm border border-gray-700"><i class="fa-solid fa-user-shield text-indigo-400 mr-2"></i>Admin Mode</div>
+            </div>
+        </header>
+
+        <div class="p-8 z-10">
+            
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-purple-500/50 transition">
+                        <div class="absolute -right-4 -top-4 text-purple-500/10 text-7xl"><i class="fa-solid fa-euro-sign"></i></div>
+                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Revenue</p>
+                        <h3 class="text-4xl font-extrabold text-white" id="stat-revenue">0.00€</h3>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-blue-500/50 transition">
+                        <div class="absolute -right-4 -top-4 text-blue-500/10 text-7xl"><i class="fa-solid fa-users"></i></div>
+                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Buyers Today</p>
+                        <h3 class="text-4xl font-extrabold text-white" id="stat-buyers">0</h3>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-emerald-500/50 transition">
+                        <div class="absolute -right-4 -top-4 text-emerald-500/10 text-7xl"><i class="fa-solid fa-key"></i></div>
+                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Generated Keys</p>
+                        <h3 class="text-4xl font-extrabold text-white" id="stat-keys">0</h3>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-receipt mr-2 text-indigo-400"></i>Recent Orders</h3>
+                <div class="glass-panel rounded-2xl overflow-hidden">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-800/50 border-b border-gray-700/50">
+                            <tr><th class="px-6 py-4 font-semibold text-gray-300">Invoice ID</th><th class="px-6 py-4 font-semibold text-gray-300">Buyer ID</th><th class="px-6 py-4 font-semibold text-gray-300">Product</th><th class="px-6 py-4 font-semibold text-gray-300">Price</th><th class="px-6 py-4 font-semibold text-gray-300">Method</th></tr>
+                        </thead>
+                        <tbody id="table-invoices" class="divide-y divide-gray-800/50">
+                            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-keys" class="tab-content">
+                <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl">
+                    <div class="p-6 border-b border-gray-700/50 flex justify-between items-center bg-gray-800/30">
+                        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-database mr-2 text-emerald-400"></i>Key Database</h3>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">All Time</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-800/50 border-b border-gray-700/50 sticky top-0 backdrop-blur-md">
+                                <tr><th class="px-6 py-4 text-gray-300">Key</th><th class="px-6 py-4 text-gray-300">Type</th><th class="px-6 py-4 text-gray-300">Status</th><th class="px-6 py-4 text-gray-300">Bound To</th></tr>
+                            </thead>
+                            <tbody id="table-keys" class="divide-y divide-gray-800/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-blacklist" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border-t-4 border-t-red-500">
+                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-user-plus mr-2 text-red-400"></i>Add to Blacklist</h3>
+                            <div class="space-y-4">
+                                <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Discord User ID</label><input type="text" id="bl-id" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition" placeholder="z.B. 123456789"></div>
+                                <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Reason</label><input type="text" id="bl-reason" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition" placeholder="z.B. Scam attempt"></div>
+                                <button onclick="addBlacklist()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.4)] mt-2">Ban User</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="glass-panel rounded-2xl overflow-hidden h-full flex flex-col">
+                            <div class="p-6 border-b border-gray-700/50 bg-gray-800/30">
+                                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-list mr-2 text-red-400"></i>Banned Users</h3>
+                            </div>
+                            <div class="flex-1 overflow-x-auto p-4">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="text-gray-400 border-b border-gray-700/50"><tr><th class="pb-3 px-4">User ID</th><th class="pb-3 px-4">Reason</th><th class="pb-3 px-4 text-right">Action</th></tr></thead>
+                                    <tbody id="table-blacklist" class="divide-y divide-gray-800/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const API = {
+            async getStats() { const r = await fetch('/api/stats'); return await r.json(); },
+            async getKeys() { const r = await fetch('/api/keys'); return await r.json(); },
+            async getBlacklist() { const r = await fetch('/api/blacklist'); return await r.json(); },
+            async removeBlacklist(uid) { await fetch('/api/blacklist/remove', {method:'POST', body:JSON.stringify({user_id:uid})}); },
+            async addBlacklist(uid, reason) { await fetch('/api/blacklist/add', {method:'POST', body:JSON.stringify({user_id:uid, reason:reason})}); }
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            
+            document.querySelectorAll('aside button').forEach(el => { el.classList.remove('text-purple-400', 'bg-purple-500/10'); el.classList.add('text-gray-400'); });
+            const btn = document.getElementById('btn-' + tabId);
+            btn.classList.add('text-purple-400', 'bg-purple-500/10'); btn.classList.remove('text-gray-400');
+            
+            const titles = {'dashboard': 'Overview', 'keys': 'Key Manager', 'blacklist': 'Blacklist Management'};
+            document.getElementById('page-title').innerText = titles[tabId];
+            
+            if(tabId === 'dashboard') loadStats();
+            else if(tabId === 'keys') loadKeys();
+            else if(tabId === 'blacklist') loadBlacklist();
+        }
+
+        async function loadStats() {
+            const data = await API.getStats();
+            document.getElementById('stat-revenue').innerText = data.total_revenue.toFixed(2) + '€';
+            document.getElementById('stat-buyers').innerText = data.buyers_today;
+            document.getElementById('stat-keys').innerText = data.total_keys;
+            
+            const tb = document.getElementById('table-invoices');
+            if(data.recent_invoices.length === 0) tb.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No orders yet</td></tr>';
+            else {
+                tb.innerHTML = data.recent_invoices.map(inv => `
+                    <tr class="hover:bg-gray-800/30 transition">
+                        <td class="px-6 py-4 font-mono text-indigo-400">${inv.id}</td>
+                        <td class="px-6 py-4 text-gray-300">${inv.buyer}</td>
+                        <td class="px-6 py-4"><span class="bg-gray-800 border border-gray-700 px-2 py-1 rounded text-xs">${inv.product}</span></td>
+                        <td class="px-6 py-4 text-emerald-400 font-bold">${inv.price}€</td>
+                        <td class="px-6 py-4 text-gray-400">${inv.method}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function loadKeys() {
+            const data = await API.getKeys();
+            const tb = document.getElementById('table-keys');
+            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
+            tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
+                const badge = info.used 
+                    ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>'
+                    : '<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">Active</span>';
+                return `<tr class="hover:bg-gray-800/30 transition"><td class="px-6 py-4 font-mono text-purple-400">${key}</td><td class="px-6 py-4">${info.type}</td><td class="px-6 py-4">${badge}</td><td class="px-6 py-4 text-gray-400">${info.bound_user_id || '-'}</td></tr>`;
+            }).join('');
+        }
+
+        async function loadBlacklist() {
+            const data = await API.getBlacklist();
+            const tb = document.getElementById('table-blacklist');
+            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Blacklist ist leer ✨</td></tr>';
+            tb.innerHTML = Object.entries(data).map(([uid, info]) => `
+                <tr class="hover:bg-gray-800/30 transition border-b border-gray-800/50">
+                    <td class="px-4 py-4 font-mono text-gray-300">${uid}</td>
+                    <td class="px-4 py-4 text-gray-400">${info.reason}</td>
+                    <td class="px-4 py-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-xs bg-gray-800 hover:bg-red-600 border border-gray-700 hover:border-red-500 text-gray-300 hover:text-white py-1 px-3 rounded transition shadow-lg"><i class="fa-solid fa-trash mr-1"></i>Remove</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function addBlacklist() {
+            const uid = document.getElementById('bl-id').value;
+            const rsn = document.getElementById('bl-reason').value || "Banned via Web Panel";
+            if(!uid) return alert('Bitte Discord ID eingeben!');
+            document.getElementById('bl-id').value = ''; document.getElementById('bl-reason').value = '';
+            await API.addBlacklist(uid, rsn); loadBlacklist();
+        }
+
+        async function rmBlacklist(uid) {
+            if(!confirm('Nutzer entbannen?')) return;
+            await API.removeBlacklist(uid); loadBlacklist();
+        }
+
+        // Init
+        switchTab('dashboard');
+    </script>
 </body>
 </html>
 """
 
-async def handle_dashboard(request):
-    return web.Response(text=DASHBOARD_HTML, content_type='text/html')
-
-async def api_get_blacklist(request):
-    return web.json_response(blacklist_db)
+async def handle_dashboard(request): return web.Response(text=DASHBOARD_HTML, content_type='text/html')
+async def api_get_blacklist(request): return web.json_response(blacklist_db)
+async def api_get_keys(request): return web.json_response(keys_db)
+async def api_get_stats(request):
+    now = now_utc(); today_buyers = 0; total_rev = 0.0; recent = []
+    for inv_id, data in list(invoices_db.items())[-10:]:
+        recent.append({"id": inv_id, "buyer": data["buyer_id"], "product": data["product_type"], "price": data.get("final_price_eur", 0), "method": data["payment_key"]})
+        total_rev += float(data.get("final_price_eur", 0))
+        try:
+            if datetime.fromisoformat(data["created_at"]).date() == now.date(): today_buyers += 1
+        except: pass
+    return web.json_response({"total_revenue": total_rev, "buyers_today": today_buyers, "total_keys": len(keys_db), "recent_invoices": recent[::-1]})
 
 async def api_remove_blacklist(request):
+    uid = (await request.json()).get("user_id")
+    if uid in blacklist_db: del blacklist_db[uid]; save_json(BLACKLIST_FILE, blacklist_db)
+    return web.json_response({"status": "success"})
+
+async def api_add_blacklist(request):
     data = await request.json()
-    uid = data.get("user_id")
-    if uid in blacklist_db:
-        del blacklist_db[uid]
+    uid = data.get("user_id"); reason = data.get("reason", "Web Panel Ban")
+    if uid:
+        blacklist_db[uid] = {"reason": reason, "added_by": "Web Admin", "added_at": iso_now()}
         save_json(BLACKLIST_FILE, blacklist_db)
     return web.json_response({"status": "success"})
 
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_dashboard)
-    app.router.add_get('/api/blacklist', api_get_blacklist)
-    app.router.add_post('/api/blacklist/remove', api_remove_blacklist)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"✅ Web Dashboard läuft auf Port {port}")
+    app.router.add_get('/api/stats', api_get_stats); app.router.add_get('/api/keys', api_get_keys); app.router.add_get('/api/blacklist', api_get_blacklist)
+    app.router.add_post('/api/blacklist/remove', api_remove_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist)
+    runner = web.AppRunner(app); await runner.setup()
+    port = int(os.environ.get("PORT", 8080)); site = web.TCPSite(runner, '0.0.0.0', port); await site.start()
 
 # =========================================================
 # HELPERS
@@ -245,7 +407,6 @@ def build_invoice_id() -> str: return f"GEN-{uuid.uuid4().hex[:10].upper()}"
 def is_reseller(member: discord.Member | None) -> bool:
     return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
 
-# NEU: Integriert Promo-Rabatte
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
     base_price = PRODUCTS[product_key]["price_eur"]
     if is_reseller(member): base_price = round(base_price * 0.5, 2)
@@ -324,10 +485,7 @@ def support_ticket_embed(user: discord.Member) -> discord.Embed: return discord.
 def buy_ticket_embed(user: discord.Member) -> discord.Embed: return discord.Embed(title="🛒 Buy Ticket Opened", description=f"{premium_divider()}\nWelcome {user.mention}\n\n**Step 1** → Choose product\n**Step 2** → Choose payment method\n**Step 3** → Follow payment instructions\n{premium_divider()}", color=COLOR_BUY).set_footer(text=f"Ticket owner: {user}")
 
 def build_order_summary(product_key: str, payment_key: str, user: discord.Member, ltc_price_eur: float | None = None) -> discord.Embed:
-    product = PRODUCTS[product_key]
-    payment = PAYMENTS[payment_key]
-    price = get_price(product_key, user)
-
+    product = PRODUCTS[product_key]; payment = PAYMENTS[payment_key]; price = get_price(product_key, user)
     price_header = f"💶 **Price:** {format_price(price)}€"
     if is_reseller(user): price_header += " (**Reseller 50% OFF**)"
 
@@ -478,7 +636,6 @@ async def create_ticket_channel(interaction: discord.Interaction, ticket_type: s
 # MODALS & VIEWS
 # =========================================================
 
-# NEU: Das Promo Code Modal
 class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
     code_input = discord.ui.TextInput(label="Promo Code", placeholder="z.B. VALE20", required=True)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
@@ -488,8 +645,7 @@ class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
         if not data: return await interaction.response.send_message("No ticket data.", ephemeral=True)
         
         code = str(self.code_input).strip().upper()
-        if code not in promos_db or promos_db[code]["uses"] <= 0:
-            return await interaction.response.send_message("❌ Ungültiger oder abgelaufener Code.", ephemeral=True)
+        if code not in promos_db or promos_db[code]["uses"] <= 0: return await interaction.response.send_message("❌ Ungültiger oder abgelaufener Code.", ephemeral=True)
             
         data["applied_promo"] = code
         await update_payment_summary_message(interaction.channel)
@@ -594,12 +750,10 @@ class ExtendModal(discord.ui.Modal, title="Extend Access"):
         if duration is None: return await interaction.response.send_message("Invalid format.", ephemeral=True)
         uid = str(self.target_user_id)
         if uid not in redeemed_db: return await interaction.response.send_message("No active redeem entry.", ephemeral=True)
-        
         old_exp = redeemed_db[uid].get("expires_at")
         now = now_utc()
         base = datetime.fromisoformat(old_exp) if old_exp and datetime.fromisoformat(old_exp) >= now else now
         new_exp = (base + duration).isoformat()
-        
         redeemed_db[uid].update({"expires_at": new_exp, "expiry_reminder_sent": False})
         save_json(REDEEMED_FILE, redeemed_db)
         member = interaction.guild.get_member(self.target_user_id)
@@ -682,10 +836,20 @@ class PaymentSelect(discord.ui.Select):
 class PaymentSelectView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(PaymentSelect())
 
+class BuySetupView(discord.ui.View):
+    def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
+    @discord.ui.button(label="Choose Product", style=discord.ButtonStyle.primary, emoji="📦", custom_id="choose_product_button")
+    async def choose_product(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
+        await interaction.response.send_message("Select product:", view=ProductSelectView(), ephemeral=True)
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_buy_ticket_button")
+    async def close_buy_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("No permission.", ephemeral=True)
+        await interaction.response.send_message("Are you sure you want to close this ticket?", view=CloseConfirmView(), ephemeral=True)
+
 class PaymentActionView(discord.ui.View):
     def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
     
-    # NEU: Der Promo Button im Bezahl-Panel
     @discord.ui.button(label="Promo Code einlösen", style=discord.ButtonStyle.secondary, emoji="🎟️", custom_id="apply_promo_button")
     async def apply_promo(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
@@ -705,21 +869,17 @@ class PaymentActionView(discord.ui.View):
     
     @discord.ui.button(label="Submit LTC TXID", style=discord.ButtonStyle.primary, emoji="🪙", custom_id="submit_txid_button")
     async def submit_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(LitecoinTxidModal(owner_id=self.owner_id))
-    
     @discord.ui.button(label="Submit Crypto TXID (ETH/SOL)", style=discord.ButtonStyle.primary, emoji="🔗", custom_id="submit_generic_txid_button")
     async def submit_generic_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(GenericCryptoTxidModal(owner_id=self.owner_id))
-    
     @discord.ui.button(label="Submit Paysafecard", style=discord.ButtonStyle.secondary, emoji="💳", custom_id="submit_paysafe_button")
     async def submit_paysafe(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(PaysafeCodeModal(owner_id=self.owner_id))
-    
     @discord.ui.button(label="Submit Amazon", style=discord.ButtonStyle.secondary, emoji="🎁", custom_id="submit_amazon_button")
     async def submit_amazon(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(AmazonCodeModal(owner_id=self.owner_id))
 
 class PaymentSummaryView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", custom_id="refresh_payment_summary")
-    async def refresh_summary(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.edit_message(embed=build_payment_summary_embed(interaction.channel.id), view=PaymentSummaryView())
+    async def refresh_summary(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.edit_message(embed=build_payment_summary_embed(interaction.channel.id), view=PaymentSummaryView())
 
 class AdminPanelView(discord.ui.View):
     def __init__(self, owner_id: int, ticket_channel_id: int): super().__init__(timeout=None); self.owner_id = owner_id; self.ticket_channel_id = ticket_channel_id
@@ -763,7 +923,6 @@ class ReviewView(discord.ui.View):
         data["invoice_id"] = invoice_id
         data["status"] = "approved"
         
-        # Check Promo Code Usage
         promo_code = data.get("applied_promo")
         promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
         if promo_code and promo_code in promos_db:
@@ -852,7 +1011,6 @@ async def sync_commands(ctx):
         await ctx.send(f"✅ Erfolgreich {len(synced)} Slash-Commands synchronisiert! Drücke STRG+R.")
     except Exception as e: await ctx.send(f"❌ Fehler:\n```py\n{e}\n```")
 
-# NEU: Das Promo Command
 @bot.tree.command(name="create_promo", description="Erstelle einen Rabattcode")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def create_promo(interaction: discord.Interaction, code: str, discount_prozent: int, max_uses: int):
