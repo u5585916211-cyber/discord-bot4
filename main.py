@@ -5,6 +5,9 @@ import uuid
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta, timezone
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from aiohttp import web
 import discord
@@ -16,6 +19,12 @@ from discord import app_commands
 # =========================================================
 TOKEN = os.getenv("TOKEN")
 GUILD_ID_RAW = os.getenv("GUILD_ID")
+
+# --- NEU: EMAIL SMTP SETUP ---
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SMTP_USER = os.getenv("SMTP_USER") # Deine Gmail Adresse
+SMTP_PASS = os.getenv("SMTP_PASS") # Dein Gmail App-Passwort
 
 if not TOKEN or not GUILD_ID_RAW: 
     raise ValueError("TOKEN oder GUILD_ID fehlt in den Railway Variablen.")
@@ -155,6 +164,44 @@ def build_invoice_id() -> str:
 
 def is_blacklisted(user_id: int): return str(user_id) in blacklist_db
 
+# --- NEU: EMAIL SENDEN ---
+def send_delivery_email(to_email, product_label, key):
+    if not SMTP_USER or not SMTP_PASS:
+        print("⚠️ Email konnte nicht gesendet werden: SMTP_USER oder SMTP_PASS fehlen.")
+        return False
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = to_email
+        msg['Subject'] = f"Deine Bestellung bei {SERVER_NAME} ist da! 🎉"
+        
+        body = f"""Hallo!
+
+Vielen Dank für deinen Einkauf bei {SERVER_NAME}.
+
+Hier ist dein Produktschlüssel:
+Produkt: {product_label}
+Key: {key}
+
+Du kannst diesen Key auf unserer Website im 'Customer' Login verwenden oder direkt in unserem Discord-Server einlösen.
+
+Viel Spaß!
+Dein {SERVER_NAME} Team"""
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        text = msg.as_string()
+        server.sendmail(SMTP_USER, to_email, text)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"⚠️ Fehler beim Senden der Email an {to_email}: {e}")
+        return False
+
 # =========================================================
 # BOT SETUP
 # =========================================================
@@ -231,12 +278,29 @@ WEB_HTML = """
             </div>
 
             <div class="flex border-b border-purple-500/50 mb-6">
-                <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">LOGIN</button>
+                <button onclick="switchAuth('shop')" id="auth-tab-shop" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">SHOP</button>
+                <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">LOGIN</button>
                 <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">CUSTOMER</button>
                 <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">REGISTER</button>
             </div>
 
-            <div id="form-login" class="space-y-4">
+            <div id="form-shop" class="space-y-4">
+                <p class="text-xs text-gray-300 text-center font-bold mb-2">Automatischer Key-Versand per E-Mail</p>
+                <select id="s-prod" class="w-full bg-black/70 border border-green-500/60 rounded-xl px-4 py-3 text-white focus:border-green-400 outline-none transition shadow-inner appearance-none">
+                    <option value="day_1">1 Day Key - 5€</option>
+                    <option value="week_1">1 Week Key - 15€</option>
+                    <option value="lifetime">Lifetime Key - 30€</option>
+                </select>
+                <input type="email" id="s-email" class="w-full bg-black/70 border border-green-500/60 rounded-xl px-4 py-3 text-white focus:border-green-400 outline-none transition shadow-inner" placeholder="Deine E-Mail Adresse">
+                <button onclick="buyProduct()" class="w-full bg-gradient-to-r from-green-700 to-green-500 hover:from-green-600 hover:to-green-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(34,197,94,0.6)]"><i class="fa-solid fa-cart-shopping mr-2"></i>KAUFEN & EMAIL SENDEN</button>
+                <div id="shop-result" class="hidden mt-4 p-4 bg-green-500/20 border border-green-500 rounded-xl text-center">
+                    <p class="text-green-400 font-bold text-sm mb-1">Zahlung erfolgreich! Dein Key:</p>
+                    <p id="shop-key-display" class="font-mono text-white font-black tracking-widest text-lg"></p>
+                    <p class="text-gray-300 text-xs mt-2">Wurde auch an deine E-Mail gesendet.</p>
+                </div>
+            </div>
+
+            <div id="form-login" class="space-y-4 hidden-view">
                 <input type="text" id="l-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Username">
                 <input type="password" id="l-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Password">
                 <button onclick="login()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">LOGIN</button>
@@ -520,14 +584,43 @@ WEB_HTML = """
             document.getElementById('form-login').classList.add('hidden-view'); 
             document.getElementById('form-register').classList.add('hidden-view');
             document.getElementById('form-customer').classList.add('hidden-view');
+            document.getElementById('form-shop').classList.add('hidden-view');
             
             document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
             document.getElementById('auth-tab-customer').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
             document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
+            document.getElementById('auth-tab-shop').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
             
             document.getElementById('form-' + type).classList.remove('hidden-view');
-            document.getElementById('auth-tab-' + type).className = "flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition";
+            
+            let color = type === 'shop' ? 'green' : 'purple';
+            document.getElementById('auth-tab-' + type).className = `flex-1 pb-3 text-${color}-400 font-bold border-b-2 border-${color}-500 transition`;
             document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        // --- NEU: SHOP FUNKTION ---
+        async function buyProduct() {
+            const email = document.getElementById('s-email').value;
+            const prod = document.getElementById('s-prod').value;
+            if (!email || !email.includes('@')) return showError("Bitte eine gültige E-Mail eingeben!");
+            
+            try {
+                const res = await fetch('/api/web_buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email, product: prod})
+                });
+                
+                if(res.ok) {
+                    const data = await res.json();
+                    document.getElementById('shop-key-display').innerText = data.key;
+                    document.getElementById('shop-result').classList.remove('hidden');
+                } else {
+                    showError("Fehler beim Kauf. Server-Error.");
+                }
+            } catch(e) {
+                showError("Verbindungsfehler!");
+            }
         }
 
         async function apiCall(endpoint, data) {
@@ -614,6 +707,9 @@ WEB_HTML = """
         }
 
         async function checkAuthOnLoad() {
+            // Standardmäßig Shop Tab anzeigen beim Laden
+            switchAuth('shop');
+            
             const t = localStorage.getItem('v_token');
             if (t) {
                 try {
@@ -844,6 +940,31 @@ def get_user_from_token(request):
 
 async def handle_index(request): 
     return web.Response(text=WEB_HTML, content_type='text/html')
+
+# --- NEU: WEB KAUF (AUTODELIVERY) ENDPOINT ---
+async def api_web_buy(request):
+    data = await request.json()
+    email = data.get("email")
+    ptype = data.get("product")
+    
+    if not email or ptype not in PRODUCTS:
+        return web.json_response({"error": "Ungültige Anfrage"}, status=400)
+    
+    # HIER WÜRDE EIGENTLICH DER ZAHLUNGSABGLEICH STEHEN (z.B. Stripe/Sellix API)
+    # Da wir hier ein Template bauen, wird die Zahlung simuliert "als erfolgreich" gewertet.
+    
+    # Generiere Key
+    new_key = generate_key(ptype, ticket_id="WEB-SHOP", creator="WebShop")
+    
+    # Rechnungs-Datensatz erstellen (Simuliert)
+    invoice_id = build_invoice_id()
+    create_invoice_record(invoice_id, email, ptype, "web", new_key, "WEB", PRODUCTS[ptype]["price_eur"], False)
+    
+    # E-Mail Senden
+    send_delivery_email(email, PRODUCTS[ptype]["label"], new_key)
+    log_activity(f"Web Kauf ({ptype}) für {email}", "Shop")
+    
+    return web.json_response({"ok": True, "key": new_key})
 
 async def api_register(request):
     data = await request.json()
@@ -1223,6 +1344,10 @@ async def api_admin_gen(request):
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_index)
+    
+    # --- NEUER ENDPOINT FÜR SHOP HINZUGEFÜGT ---
+    app.router.add_post('/api/web_buy', api_web_buy)
+    
     app.router.add_post('/api/login', api_login)
     app.router.add_post('/api/customer_login', api_customer_login)
     app.router.add_post('/api/register', api_register)
