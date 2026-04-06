@@ -50,10 +50,10 @@ RESELLER_ROLE_ID = 1490335130890534923
 SERVER_NAME = "Vale Generator"
 
 # Bilder-Links
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d4788d&is=69d3270d&hm=b2bd6f9958e64ece4ba574875ba2c5c225c539dfe58bf831b63e2946a7059288&=&format=webp&quality=lossless&width=548&height=548" 
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490664132377186324/image.png?ex=69d4e0a8&is=69d38f28&hm=c69fe3481c10997203c1548c2ebb320076a30ac5181a76dd984c5bd27471ad4d&=&format=webp&quality=lossless&width=350&height=350" 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
-PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d4788d&is=69d3270d&hm=68f7da51ae2a3eb59d3bbfb8242799a0da4d5f47c0cf1c250d6d2e4cea7a7ebc&=&format=webp&width=548&height=548"
+PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490664154162270348/image.png?ex=69d4e0ad&is=69d38f2d&hm=de8c0467089070a103a95033eaf7dd2d610e099d49c3d1c5ae775a4da5181b08&=&format=webp&quality=lossless&width=350&height=350"
 
 # Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
@@ -90,8 +90,7 @@ PROMOS_FILE = "promos.json"
 ACTIVITY_FILE = "activity.json"
 WEBKEYS_FILE = "web_keys.json"
 USERS_FILE = "web_users.json"
-TICKETS_FILE = "tickets.json"
-SESSIONS_FILE = "sessions.json"
+TICKETS_FILE = "tickets.json"  # NEU: Tickets überleben jetzt Neustarts!
 
 PRODUCTS = {
     "day_1": {"label": "1 Day", "price_eur": 5, "duration": timedelta(days=1), "key_prefix": "GEN-1D"},
@@ -117,10 +116,8 @@ def load_json(path, default):
             json.dump(default, f)
         return default
     with open(path, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except Exception:
-            return default
+        try: return json.load(f)
+        except Exception: return default
 
 def save_json(path, data):
     with open(path, "w", encoding="utf-8") as f:
@@ -139,32 +136,22 @@ promos_db = load_json(PROMOS_FILE, {})
 activity_db = load_json(ACTIVITY_FILE, [])
 webkeys_db = load_json(WEBKEYS_FILE, {})
 users_db = load_json(USERS_FILE, {})
-web_sessions = load_json(SESSIONS_FILE, {})
+web_sessions = {}
 
 def log_activity(action, user="System"):
     global activity_db
-    activity_db.insert(0, {
-        "time": iso_now(), 
-        "user": str(user), 
-        "action": action
-    })
+    activity_db.insert(0, {"time": iso_now(), "user": str(user), "action": action})
     activity_db = activity_db[:50]
     save_json(ACTIVITY_FILE, activity_db)
 
-def now_utc(): 
-    return datetime.now(timezone.utc)
-
-def iso_now(): 
-    return now_utc().isoformat()
-
-def random_block(length=4): 
-    return uuid.uuid4().hex[:length].upper()
+def now_utc(): return datetime.now(timezone.utc)
+def iso_now(): return now_utc().isoformat()
+def random_block(length=4): return uuid.uuid4().hex[:length].upper()
 
 def build_invoice_id() -> str:
     return f"GEN-{uuid.uuid4().hex[:10].upper()}"
 
-def is_blacklisted(user_id: int): 
-    return str(user_id) in blacklist_db
+def is_blacklisted(user_id: int): return str(user_id) in blacklist_db
 
 # =========================================================
 # BOT SETUP
@@ -179,10 +166,10 @@ class ValeBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
         
     async def setup_hook(self):
-        # Web-Server startet sofort, verhindert Railway Timeouts
+        # Web-Server startet sofort, verhindert "Application failed to respond"
         self.loop.create_task(start_web_server())
 
-        # Registriere alle Views permanent (für Restarts)
+        # Registriere alle Buttons permanent (Damit sie nach Restart funktionieren)
         self.add_view(MainTicketPanelView())
         self.add_view(RedeemPanelView())
         self.add_view(PaymentSummaryView())
@@ -210,31 +197,24 @@ WEB_HTML = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #050505; 
-            color: #e5e7eb; 
-        }
-        .glass { 
-            background: rgba(20, 10, 30, 0.7); 
-            backdrop-filter: blur(15px); 
-            border: 1px solid rgba(168, 85, 247, 0.2); 
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; }
+        .glass { background: rgba(20, 10, 30, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(168, 85, 247, 0.2); }
         .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.8); }
         .glow-box { box-shadow: 0 0 30px rgba(147, 51, 234, 0.3); }
         .hidden-view { display: none !important; }
         .tab-content { display: none; } 
         .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        ::-webkit-scrollbar { width: 6px; } 
-        ::-webkit-scrollbar-track { background: #050505; } 
-        ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #050505; } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
+
+    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] z-[999] flex flex-col items-center justify-center hidden-view">
+        <i class="fa-solid fa-satellite-dish animate-pulse text-purple-500 text-6xl mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]"></i>
+        <h2 class="text-3xl font-black text-white tracking-widest glow-text">RECONNECTING</h2>
+        <p class="text-gray-400 mt-3 font-bold">Verbindung zum Server wird wiederhergestellt...</p>
+    </div>
 
     <div id="view-auth" class="flex w-full h-full items-center justify-center relative">
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
@@ -278,9 +258,6 @@ WEB_HTML = """
                 <nav class="p-4 space-y-2 mt-2">
                     <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/20 font-bold border border-purple-500/30 transition">
                         <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
-                    </button>
-                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-bolt w-6"></i> Generator
                     </button>
                     <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
                         <i class="fa-solid fa-key w-6"></i> Key Manager
@@ -343,23 +320,6 @@ WEB_HTML = """
                         <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col">
                             <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3>
                             <div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="gen" class="tab-content">
-                    <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 max-w-2xl">
-                        <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access Keys (Admin)</h2>
-                        <div class="space-y-4">
-                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white">
-                                <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                            </button>
-                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white">
-                                <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                            </button>
-                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-                                <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -556,17 +516,27 @@ WEB_HTML = """
             const headers = {'Content-Type': 'application/json'};
             if (token) headers['Authorization'] = token;
             
-            const res = await fetch(endpoint, {
-                method: 'POST', 
-                headers: headers, 
-                body: JSON.stringify(data)
-            });
-            
-            if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register') { 
-                logout(); 
-                throw new Error('Unauthorized'); 
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST', 
+                    headers: headers, 
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register') { 
+                    logout(); 
+                    throw new Error('Unauthorized'); 
+                }
+                return res;
+            } catch (e) {
+                console.error("API Call Error:", e);
+                // Zeigt Reconnect-Screen, wenn Server offline ist
+                if (endpoint !== '/api/verify') {
+                    document.getElementById('reconnect-overlay').classList.remove('hidden-view');
+                    setTimeout(checkAuthOnLoad, 2500);
+                }
+                throw e;
             }
-            return res;
         }
 
         function showError(msg) { 
@@ -616,16 +586,31 @@ WEB_HTML = """
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
             if (t) {
-                const res = await fetch('/api/verify', {
-                    method: 'POST', 
-                    headers: {'Authorization': t, 'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({})
-                });
-                if (res.ok) { 
-                    const d = await res.json(); 
-                    initApp(d.role, d.user); 
-                } else {
-                    logout();
+                // FIX FÜR DEN BLACK SCREEN: Login Screen verstecken & Overlay zeigen, statt ins Leere zu starren
+                document.getElementById('view-auth').classList.add('hidden-view');
+                document.getElementById('reconnect-overlay').classList.remove('hidden-view');
+                
+                try {
+                    const res = await fetch('/api/verify', {
+                        method: 'POST', 
+                        headers: {'Authorization': t, 'Content-Type': 'application/json'}, 
+                        body: JSON.stringify({})
+                    });
+                    
+                    if (res.ok) { 
+                        // Server ist erreichbar -> Overlay weg, App starten!
+                        document.getElementById('reconnect-overlay').classList.add('hidden-view');
+                        const d = await res.json(); 
+                        initApp(d.role, d.user); 
+                    } else if (res.status === 401) {
+                        logout(); 
+                    } else {
+                        // Server startet gerade neu (502/503), probiere es gleich nochmal!
+                        setTimeout(checkAuthOnLoad, 3000);
+                    }
+                } catch(e) {
+                    // Server down, probiere es gleich nochmal!
+                    setTimeout(checkAuthOnLoad, 3000);
                 }
             }
         }
@@ -654,7 +639,6 @@ WEB_HTML = """
             
             const titles = {
                 'dash': 'Overview', 
-                'gen': 'Key Generator',
                 'keys': 'Keys & Logs', 
                 'promos': 'Promo Codes', 
                 'lookup': 'User Lookup', 
@@ -890,7 +874,7 @@ WEB_HTML = """
             loadBlacklist(); 
         }
 
-        // RESELLER & ADMIN GENERATOR FUNCTIONS
+        // RESELLER FUNCTIONS
         async function loadResellerKeys() {
             const res = await apiCall('/api/reseller/data', {}); 
             const data = await res.json();
@@ -914,14 +898,6 @@ WEB_HTML = """
             document.getElementById('new-key').value = d.key; 
             document.getElementById('key-modal').classList.remove('hidden-view'); 
             loadResellerKeys();
-        }
-
-        async function genAdminKey(type) {
-            const res = await apiCall('/api/admin/generate', {t: type}); 
-            const d = await res.json();
-            
-            document.getElementById('new-key').value = d.key; 
-            document.getElementById('key-modal').classList.remove('hidden-view'); 
         }
 
         function closeModal() { 
@@ -970,7 +946,6 @@ async def api_register(request):
     token = str(uuid.uuid4())
     web_sessions[token] = {"user": username, "role": role}
     save_json(SESSIONS_FILE, web_sessions)
-    
     return web.json_response({"ok": True, "token": token, "role": role, "user": username})
 
 async def api_login(request):
@@ -1213,37 +1188,12 @@ async def api_reseller_gen(request):
         "used_by": None, 
         "bound_user_id": None, 
         "created_at": iso_now(), 
-        "created_by": user_info["user"],
-        "revoked": False
+        "created_by": user_info["user"]
     }
     save_json(KEYS_FILE, keys_db)
-    log_activity(f"Reseller {user_info['user']} created {ptype} Key", user_info["user"])
+    log_activity(f"Created {ptype} Key", user_info["user"])
     
     return web.json_response({"key": new_key})
-
-async def api_admin_gen(request):
-    user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
-    ptype = (await request.json()).get("t", "day_1")
-    prefix = PRODUCTS[ptype]["key_prefix"]
-    new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
-    
-    keys_db[new_key] = {
-        "type": ptype, 
-        "used": False, 
-        "used_by": None, 
-        "bound_user_id": None, 
-        "created_at": iso_now(), 
-        "created_by": user_info["user"],
-        "revoked": False
-    }
-    save_json(KEYS_FILE, keys_db)
-    log_activity(f"Admin {user_info['user']} created {ptype} Key", user_info["user"])
-    
-    return web.json_response({"key": new_key})
-
 
 async def start_web_server():
     app = web.Application()
@@ -1270,8 +1220,6 @@ async def start_web_server():
     
     app.router.add_post('/api/reseller/data', api_reseller_data)
     app.router.add_post('/api/reseller/generate', api_reseller_gen)
-    
-    app.router.add_post('/api/admin/generate', api_admin_gen)
     
     runner = web.AppRunner(app)
     await runner.setup()
@@ -1322,8 +1270,7 @@ def generate_key(product_type: str, ticket_id: str | None = None, creator="Syste
                 "created_at": iso_now(), 
                 "redeemed_at": None, 
                 "approved_in_ticket": ticket_id, 
-                "created_by": creator,
-                "revoked": False
+                "created_by": creator
             }
             save_json(KEYS_FILE, keys_db)
             log_activity("Generierte einen Key", creator)
@@ -1471,8 +1418,26 @@ async def send_summary_and_admin_panels(channel: discord.TextChannel, owner_id: 
     save_json(TICKETS_FILE, ticket_data)
     await send_admin_panel_to_channel(channel.guild, owner_id, channel.id)
 
-# --- VIEWS & MODALS ---
+# --- REDEEM LOGIC ---
+async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key: str):
+    if is_blacklisted(member.id): return False, "You are blacklisted."
+    if key not in keys_db: return False, "Key not found."
+    if keys_db[key].get("revoked"): return False, "This key has been banned."
+    if keys_db[key]["used"]: return False, "Already used."
+    pt = keys_db[key]["type"]
+    r = guild.get_role(REDEEM_ROLE_ID)
+    if not r: return False, "Role not found."
+    
+    keys_db[key].update({"used": True, "used_by": str(member.id)})
+    save_json(KEYS_FILE, keys_db)
+    
+    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + PRODUCTS[pt]["duration"]).isoformat() if PRODUCTS[pt]["duration"] else None}
+    save_json(REDEEMED_FILE, redeemed_db)
+    
+    await member.add_roles(r)
+    return True, pt
 
+# --- VIEWS & MODALS ---
 class CloseConfirmView(discord.ui.View):
     def __init__(self): 
         super().__init__(timeout=60)
@@ -1701,7 +1666,7 @@ class PaymentSummaryView(discord.ui.View):
     async def refresh_summary(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.edit_message(embed=build_payment_summary_embed(interaction.channel.id), view=PaymentSummaryView())
 
-# --- DYNAMISCHE APPROVE/DENY LOGIK (REPARIERT) ---
+# HIER IST DER MAGISCHE FIX: Dynamisches Lesen der IDs aus dem Embed, damit Knöpfe auch nach Restart gehen.
 async def process_approve(interaction: discord.Interaction, target_channel_id: int, buyer_id: int):
     try:
         channel = interaction.guild.get_channel(target_channel_id)
@@ -1866,6 +1831,7 @@ class MainTicketPanelView(discord.ui.View):
 
         await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
+
 class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
     key_input = discord.ui.TextInput(label="Key", required=True)
     
@@ -1937,6 +1903,7 @@ async def gen_admin_key(interaction: discord.Interaction):
         
     await interaction.response.send_message(f"Admin Invite Key generiert: `{new_key}`", ephemeral=True)
 
+
 @bot.tree.command(name="gen_reseller_key", description="Generiert einen RESELLER-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_reseller_key(interaction: discord.Interaction, user: discord.Member):
@@ -1963,6 +1930,7 @@ async def gen_reseller_key(interaction: discord.Interaction, user: discord.Membe
         
     await interaction.response.send_message(f"Reseller Invite Key generiert: `{new_key}`", ephemeral=True)
 
+
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def ticket(interaction: discord.Interaction):
@@ -1974,11 +1942,13 @@ async def ticket(interaction: discord.Interaction):
     embed.set_image(url=PANEL_IMAGE_URL)
     await interaction.response.send_message(embed=embed, view=MainTicketPanelView())
 
+
 @bot.tree.command(name="send_redeem_panel", description="Send the redeem panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_redeem_panel(interaction: discord.Interaction):
     embed = discord.Embed(title="🎟️ VALE GEN REDEEM CENTER", description="Click to redeem your key.", color=COLOR_MAIN)
     await interaction.response.send_message(embed=embed, view=RedeemPanelView())
+
 
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du?", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
@@ -1998,6 +1968,7 @@ async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[in
         await ch.send(embed=embed)
     await interaction.response.send_message("✅ Danke für deine Bewertung!", ephemeral=True)
 
+
 @bot.tree.command(name="send_rules", description="Postet das Regelwerk")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_rules(interaction: discord.Interaction):
@@ -2012,6 +1983,7 @@ async def send_rules(interaction: discord.Interaction):
     embed.set_image(url=WELCOME_BANNER_URL)
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("Regelwerk gepostet!", ephemeral=True)
+
 
 @bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
