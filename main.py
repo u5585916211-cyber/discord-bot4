@@ -55,8 +55,8 @@ SERVER_NAME = "Vale Generator"
 WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652"
 
-WELCOME_THUMBNAIL_URL = https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652
-WELCOME_BANNER_URL = https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652
+WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652"
+WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652"
 
 # Web-Fix für lange Discord URLS (Damit das HTML nicht bricht)
 SAFE_WEBSITE_LOGO_URL = WEBSITE_LOGO_URL.replace("&", "&amp;")
