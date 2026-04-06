@@ -50,17 +50,13 @@ RESELLER_ROLE_ID = 1490335130890534923
 SERVER_NAME = "Vale Generator"
 
 # =========================================================
-# 🔥 DEINE NEUEN BILDER-LINKS
+# 🔥 DEINE BILDER-LINKS (PERFEKT EINGEBUNDEN!)
 # =========================================================
 WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652"
 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652"
-
-# Web-Fix für lange Discord URLS (Damit das HTML nicht bricht)
-SAFE_WEBSITE_LOGO_URL = WEBSITE_LOGO_URL.replace("&", "&amp;")
-
 # Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
@@ -186,7 +182,9 @@ bot = ValeBot()
 # =========================================================
 # 🌍 WEB DASHBOARD HTML
 # =========================================================
-WEB_HTML = f"""
+# ACHTUNG: Hier ist absichtlich KEIN 'f' vor dem String! 
+# Das verhindert, dass Python wegen Javascript-Klammern abstürzt.
+WEB_HTML = """
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
@@ -197,25 +195,25 @@ WEB_HTML = f"""
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body {{ font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; overflow-x: hidden; }}
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; overflow-x: hidden; }
         
-        .synthwave-bg {{ background: linear-gradient(to bottom, #090014, #2a0845, #140024); position: fixed; inset: 0; z-index: -2; }}
-        .synthwave-grid {{
+        .synthwave-bg { background: linear-gradient(to bottom, #090014, #2a0845, #140024); position: fixed; inset: 0; z-index: -2; }
+        .synthwave-grid {
             position: fixed; bottom: 0; left: -50%; width: 200%; height: 40%;
             background-image: linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px), linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
             background-size: 60px 60px; transform: perspective(600px) rotateX(60deg);
             animation: gridMove 2s linear infinite; z-index: -1;
-        }}
-        @keyframes gridMove {{ 0% {{ background-position: 0 0; }} 100% {{ background-position: 0 60px; }} }}
+        }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
 
-        .glass {{ background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }}
-        .glow-text {{ text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }}
-        .glow-box {{ box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }}
-        .hidden-view {{ display: none !important; }}
-        .tab-content {{ display: none; }} 
-        .tab-content.active {{ display: block; animation: fadeIn 0.3s ease; }}
-        @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-        ::-webkit-scrollbar {{ width: 6px; }} ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.5); }} ::-webkit-scrollbar-thumb {{ background: #9333ea; border-radius: 4px; }}
+        .glass { background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }
+        .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }
+        .glow-box { box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }
+        .hidden-view { display: none !important; }
+        .tab-content { display: none; } 
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
     </style>
 </head>
 <body class="flex h-screen selection:bg-purple-500 selection:text-white relative">
@@ -226,7 +224,7 @@ WEB_HTML = f"""
     <div id="view-auth" class="flex w-full h-full items-center justify-center relative z-10">
         <div class="glass p-10 rounded-3xl max-w-md w-full relative glow-box border-2 border-purple-500/50">
             <div class="text-center mb-8">
-                <img src="{SAFE_WEBSITE_LOGO_URL}" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
+                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
                 <h1 class="text-3xl font-black text-white tracking-widest glow-text mt-4">VALE GEN</h1>
             </div>
 
@@ -263,7 +261,7 @@ WEB_HTML = f"""
         <div class="max-w-3xl mx-auto w-full">
             <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
                 <div class="flex items-center">
-                    <img src="{SAFE_WEBSITE_LOGO_URL}" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
                     <div>
                         <h1 class="text-2xl font-black text-white">Customer Portal</h1>
                         <p class="text-sm text-pink-400 font-mono font-bold" id="cust-key-display">GEN-...</p>
@@ -299,7 +297,7 @@ WEB_HTML = f"""
         <aside class="w-64 glass border-r border-purple-500/40 flex flex-col justify-between shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
             <div>
                 <div class="h-32 flex items-center justify-center border-b border-purple-500/40 px-4 bg-black/20">
-                    <img src="{SAFE_WEBSITE_LOGO_URL}" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
                     <span class="text-2xl font-black text-white glow-text">ADMIN</span>
                 </div>
                 <nav class="p-4 space-y-3 mt-4">
@@ -477,7 +475,7 @@ WEB_HTML = f"""
         <div class="max-w-5xl mx-auto w-full">
             <header class="flex justify-between items-center mb-10 glass p-6 rounded-3xl glow-box border border-purple-500/40">
                 <div class="flex items-center">
-                    <img src="{SAFE_WEBSITE_LOGO_URL}" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
                     <div>
                         <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-widest uppercase">Reseller Portal</h1>
                         <p class="text-purple-300 font-bold mt-1">Willkommen zurück, <span id="r-name" class="text-white font-black"></span></p>
@@ -548,7 +546,7 @@ WEB_HTML = f"""
 
         function showError(msg) { 
             const e = document.getElementById('auth-error'); 
-            e.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; 
+            e.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> ' + msg; 
             e.classList.remove('hidden'); 
         }
 
@@ -831,7 +829,7 @@ WEB_HTML = f"""
     </script>
 </body>
 </html>
-"""
+""".replace("LOGO_URL_PLACEHOLDER", SAFE_WEBSITE_LOGO_URL)
 
 # =========================================================
 # 🌍 API ENDPOINTS (WEB SERVER)
@@ -1820,7 +1818,7 @@ class MainTicketPanelView(discord.ui.View):
         await self.create_ticket_channel(interaction, "buy")
         
     async def create_ticket_channel(self, interaction: discord.Interaction, ticket_type: str):
-        # 🔥 ANTI-DOPPEL-TICKET SPERRE 🔥
+        # 🔥 NEU: Der Anti-Spam-Fix! Blockt doppelte Tickets ab. 🔥
         await interaction.response.defer(ephemeral=True)
         
         guild, user = interaction.guild, interaction.user
@@ -1829,13 +1827,13 @@ class MainTicketPanelView(discord.ui.View):
             return await interaction.followup.send("Du bist auf der Blacklist.", ephemeral=True)
             
         if user.id in ticket_locks:
-            return await interaction.followup.send("⏳ Dein Ticket wird gerade erstellt... Bitte nicht mehrmals klicken!", ephemeral=True)
+            return await interaction.followup.send("⏳ Bitte warten! Ticket wird bereits erstellt...", ephemeral=True)
             
         ticket_locks.add(user.id)
         try:
             existing = await find_existing_ticket(guild, user)
             if existing: 
-                return await interaction.followup.send(f"Du hast bereits ein offenes Ticket: {existing.mention}", ephemeral=True)
+                return await interaction.followup.send(f"Ticket open: {existing.mention}", ephemeral=True)
                 
             category = guild.get_channel(BUY_CATEGORY_ID if ticket_type == "buy" else SUPPORT_CATEGORY_ID)
             overwrites = {
@@ -1871,9 +1869,9 @@ class MainTicketPanelView(discord.ui.View):
                 await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=discord.Embed(title="🛒 Buy Ticket", description="Click 'Choose Product' below.", color=COLOR_BUY), view=BuySetupView())
                 await send_summary_and_admin_panels(channel, user.id)
 
-            await interaction.followup.send(f"✅ Ticket erfolgreich erstellt: {channel.mention}", ephemeral=True)
+            await interaction.followup.send(f"Ticket created: {channel.mention}", ephemeral=True)
         finally:
-            # Ticket-Sperre nach Erstellung wieder aufheben
+            # Ticket-Lock wird wieder entfernt, sobald der Channel da ist!
             ticket_locks.discard(user.id)
 
 
@@ -1923,7 +1921,6 @@ async def on_member_join(member):
 # SLASH COMMANDS
 # =========================================================
 
-# 🔥 DER ABSOLUTE NUKE BEFEHL: Löscht die kaputten Error-Keys für immer
 @bot.tree.command(name="nuke_database", description="(ADMIN) Löscht alle DBs (FIXT DEN KEYS BUG)!")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def nuke_database(interaction: discord.Interaction):
@@ -1947,7 +1944,7 @@ async def nuke_database(interaction: discord.Interaction):
     save_json(REDEEMED_FILE, redeemed_db)
     save_json(USED_TXIDS_FILE, used_txids_db)
     
-    await interaction.response.send_message("💣 **BOOM!** Website, Keys & Tickets Datenbanken wurden GELÖSCHT. Der Bug mit den falschen Keys ist weg!", ephemeral=True)
+    await interaction.response.send_message("💣 **BOOM!** Website, Keys & Tickets Datenbanken wurden GELÖSCHT. Alles ist komplett resettet!", ephemeral=True)
 
 @bot.tree.command(name="gen_admin_key", description="Generiert einen ADMIN-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
