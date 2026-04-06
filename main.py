@@ -50,7 +50,7 @@ RESELLER_ROLE_ID = 1490335130890534923
 SERVER_NAME = "Vale Generator"
 
 # Bilder-Links
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d5214d&is=69d3cfcd&hm=b3b01648a64a140c05fd97ac12f82fdd56d290ba5884f067a55d7ce9289c52bd&=&format=webp&quality=lossless&width=548&height=548" 
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652" 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d4788d&is=69d3270d&hm=68f7da51ae2a3eb59d3bbfb8242799a0da4d5f47c0cf1c250d6d2e4cea7a7ebc&=&format=webp&width=548&height=548"
