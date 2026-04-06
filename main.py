@@ -3,26 +3,30 @@ import re
 import json
 import uuid
 import asyncio
+import aiohttp
 from datetime import datetime, timedelta, timezone
 
-import aiohttp
 from aiohttp import web
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
 # =========================================================
-# ENV
+# ENV VARIABLES
 # =========================================================
 TOKEN = os.getenv("TOKEN")
 GUILD_ID_RAW = os.getenv("GUILD_ID")
 
-if not TOKEN or not GUILD_ID_RAW: raise ValueError("TOKEN oder GUILD_ID fehlt in Railway.")
-try: GUILD_ID = int(GUILD_ID_RAW)
-except ValueError: raise ValueError("GUILD_ID muss eine Zahl sein.")
+if not TOKEN or not GUILD_ID_RAW: 
+    raise ValueError("TOKEN oder GUILD_ID fehlt in den Railway Variablen.")
+
+try: 
+    GUILD_ID = int(GUILD_ID_RAW)
+except ValueError: 
+    raise ValueError("GUILD_ID muss eine gültige Zahl sein.")
 
 # =========================================================
-# CONFIG & LINKS
+# CONFIGURATION & LINKS
 # =========================================================
 BUY_CATEGORY_ID = 1490336321913356459
 SUPPORT_CATEGORY_ID = 1490336154044727407
@@ -37,20 +41,21 @@ ADMIN_PANEL_CHANNEL_ID = 1490335327619911873
 WELCOME_CHANNEL_ID = 1490374553183060090
 RULES_CHANNEL_ID = 1490376004391272498
 VOUCH_CHANNEL_ID = 1490372381791748176
-ANNOUNCEMENT_CHANNEL_ID = 1490329714022289562
+ANNOUNCEMENT_CHANNEL_ID = 1490329714022289562 
 WEB_KEY_CHANNEL_ID = 1490476535843393679
 
 REDEEM_ROLE_ID = 1490321899266506913
 RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
-# ⚠️ HIER IST DEIN NEUES LOGO DRIN:
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548"
 
+# Bilder-Links (Neues Logo integriert)
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548" 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d3cfcd&is=69d27e4d&hm=168f0fdba0376421e2a18ad6f421112517035adb2f0711d5c658521f9320c8b6&=&format=webp&width=548&height=548"
 
+# Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
 ETHEREUM_ADDRESS = "0x6Ba2afdA7e61817f9c27f98ffAfe9051F9ad8167"
@@ -59,52 +64,116 @@ SOLANA_ADDRESS = "DnzXgySsPnSdEKsMJub21dBjM6bcT2jtic73VeutN3p4"
 LTC_MIN_CONFIRMATIONS = 1
 EXPIRY_REMINDER_HOURS = 12
 
-COLOR_MAIN = 0x9333EA; COLOR_SUPPORT = 0x3BA7FF; COLOR_BUY = 0x57F287
-COLOR_WARN = 0xFEE75C; COLOR_DENY = 0xED4245; COLOR_LOG = 0x2B2D31; COLOR_SUCCESS = 0x57F287
-COLOR_INFO = 0x9333EA; COLOR_ADMIN = 0x9B59B6; COLOR_WELCOME = 0xDD0000
+# Farben für Discord Embeds
+COLOR_MAIN = 0x9333EA
+COLOR_SUPPORT = 0x3BA7FF
+COLOR_BUY = 0x57F287
+COLOR_WARN = 0xFEE75C
+COLOR_DENY = 0xED4245
+COLOR_LOG = 0x2B2D31
+COLOR_SUCCESS = 0x57F287
+COLOR_INFO = 0x9333EA
+COLOR_ADMIN = 0x9B59B6
+COLOR_WELCOME = 0xDD0000
 
 # =========================================================
-# DATABASES
+# DATABASES & FILES
 # =========================================================
-KEYS_FILE = "keys.json"; REDEEMED_FILE = "redeemed.json"; USED_TXIDS_FILE = "used_txids.json"
-USED_PAYSAFE_FILE = "used_paysafecodes.json"; USED_AMAZON_FILE = "used_amazoncodes.json"
-BLACKLIST_FILE = "blacklist.json"; INVOICES_FILE = "invoices.json"; PROMOS_FILE = "promos.json"
-ACTIVITY_FILE = "activity.json"; WEBKEYS_FILE = "web_keys.json"; USERS_FILE = "web_users.json"
+KEYS_FILE = "keys.json"
+REDEEMED_FILE = "redeemed.json"
+USED_TXIDS_FILE = "used_txids.json"
+USED_PAYSAFE_FILE = "used_paysafecodes.json"
+USED_AMAZON_FILE = "used_amazoncodes.json"
+BLACKLIST_FILE = "blacklist.json"
+INVOICES_FILE = "invoices.json"
+PROMOS_FILE = "promos.json"
+ACTIVITY_FILE = "activity.json"
+WEBKEYS_FILE = "web_keys.json"
+USERS_FILE = "web_users.json"
+TICKETS_FILE = "tickets.json"  # NEU: Tickets überleben jetzt Neustarts!
 
 PRODUCTS = {
     "day_1": {"label": "1 Day", "price_eur": 5, "duration": timedelta(days=1), "key_prefix": "GEN-1D"},
     "week_1": {"label": "1 Week", "price_eur": 15, "duration": timedelta(weeks=1), "key_prefix": "GEN-1W"},
     "lifetime": {"label": "Lifetime", "price_eur": 30, "duration": None, "key_prefix": "GEN-LT"}
 }
-PAYMENTS = {"paypal": {"label": "PayPal", "emoji": "💸"}, "litecoin": {"label": "Litecoin", "emoji": "🪙"}, "ethereum": {"label": "Ethereum", "emoji": "🔷"}, "solana": {"label": "Solana", "emoji": "🟣"}, "paysafecard": {"label": "Paysafecard", "emoji": "💳"}, "amazoncard": {"label": "Amazon Card", "emoji": "🎁"}}
 
-intents = discord.Intents.default(); intents.guilds = True; intents.members = True; intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+PAYMENTS = {
+    "paypal": {"label": "PayPal", "emoji": "💸"},
+    "litecoin": {"label": "Litecoin", "emoji": "🪙"},
+    "ethereum": {"label": "Ethereum", "emoji": "🔷"},
+    "solana": {"label": "Solana", "emoji": "🟣"},
+    "paysafecard": {"label": "Paysafecard", "emoji": "💳"},
+    "amazoncard": {"label": "Amazon Card", "emoji": "🎁"}
+}
 
-ticket_data = {}; keys_db = {}; redeemed_db = {}; used_txids_db = {}; used_paysafe_db = {}; used_amazon_db = {}
-blacklist_db = {}; invoices_db = {}; promos_db = {}; activity_db = []; webkeys_db = {}; users_db = {}
+# Bot Setup
+intents = discord.Intents.default()
+intents.guilds = True
+intents.members = True
+intents.message_content = True
+
+class ValeBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="!", intents=intents)
+        
+    async def setup_hook(self):
+        # Web-Server startet sofort
+        self.loop.create_task(start_web_server())
+
+bot = ValeBot()
+
+# Datenstrukturen im Speicher
+ticket_data = {}
+keys_db = {}
+redeemed_db = {}
+used_txids_db = {}
+used_paysafe_db = {}
+used_amazon_db = {}
+blacklist_db = {}
+invoices_db = {}
+promos_db = {}
+activity_db = []
+webkeys_db = {}
+users_db = {}
 web_sessions = {}
 
 def load_json(path, default):
     if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f: json.dump(default, f)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(default, f)
         return default
     with open(path, "r", encoding="utf-8") as f:
-        try: return json.load(f)
-        except: return default
+        try:
+            return json.load(f)
+        except Exception:
+            return default
+
 def save_json(path, data):
-    with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
 
 def log_activity(action, user="System"):
     global activity_db
-    activity_db.insert(0, {"time": iso_now(), "user": str(user), "action": action})
+    activity_db.insert(0, {
+        "time": iso_now(), 
+        "user": str(user), 
+        "action": action
+    })
     activity_db = activity_db[:50]
     save_json(ACTIVITY_FILE, activity_db)
 
-def now_utc(): return datetime.now(timezone.utc)
-def iso_now(): return now_utc().isoformat()
-def random_block(length=4): return uuid.uuid4().hex[:length].upper()
-def is_blacklisted(user_id: int): return str(user_id) in blacklist_db
+def now_utc(): 
+    return datetime.now(timezone.utc)
+
+def iso_now(): 
+    return now_utc().isoformat()
+
+def random_block(length=4): 
+    return uuid.uuid4().hex[:length].upper()
+
+def is_blacklisted(user_id: int): 
+    return str(user_id) in blacklist_db
 
 # =========================================================
 # 🌍 WEB DASHBOARD HTML
@@ -120,14 +189,28 @@ WEB_HTML = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; }
-        .glass { background: rgba(20, 10, 30, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(168, 85, 247, 0.2); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #050505; 
+            color: #e5e7eb; 
+        }
+        .glass { 
+            background: rgba(20, 10, 30, 0.7); 
+            backdrop-filter: blur(15px); 
+            border: 1px solid rgba(168, 85, 247, 0.2); 
+        }
         .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.8); }
         .glow-box { box-shadow: 0 0 30px rgba(147, 51, 234, 0.3); }
         .hidden-view { display: none !important; }
-        .tab-content { display: none; } .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #050505; } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
+        .tab-content { display: none; } 
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        ::-webkit-scrollbar { width: 6px; } 
+        ::-webkit-scrollbar-track { background: #050505; } 
+        ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
@@ -138,25 +221,25 @@ WEB_HTML = """
         
         <div class="glass p-10 rounded-3xl max-w-md w-full relative z-10 glow-box">
             <div class="text-center mb-8">
-                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-24 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]">
-                <h1 class="text-3xl font-black text-white tracking-widest glow-text">VALE GEN</h1>
+                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)] object-contain">
+                <h1 class="text-3xl font-black text-white tracking-widest glow-text mt-4">VALE GEN</h1>
             </div>
 
             <div class="flex border-b border-purple-500/30 mb-6">
                 <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">LOGIN</button>
-                <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition">REGISTER</button>
+                <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent">REGISTER</button>
             </div>
 
             <div id="form-login" class="space-y-4">
-                <input type="text" id="l-user" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none" placeholder="Username">
-                <input type="password" id="l-pass" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none" placeholder="Password">
+                <input type="text" id="l-user" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition" placeholder="Username">
+                <input type="password" id="l-pass" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition" placeholder="Password">
                 <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]">LOGIN</button>
             </div>
 
             <div id="form-register" class="space-y-4 hidden-view">
-                <input type="text" id="r-user" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none" placeholder="Choose Username">
-                <input type="password" id="r-pass" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none" placeholder="Choose Password">
-                <input type="text" id="r-key" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-500 outline-none" placeholder="Invitation Key (VALE-...)">
+                <input type="text" id="r-user" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition" placeholder="Choose Username">
+                <input type="password" id="r-pass" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition" placeholder="Choose Password">
+                <input type="text" id="r-key" class="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-500 outline-none transition" placeholder="Invitation Key (VALE-...)">
                 <button onclick="register()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]">CREATE ACCOUNT</button>
             </div>
             
@@ -167,48 +250,99 @@ WEB_HTML = """
     <div id="view-admin" class="flex w-full h-full hidden-view">
         <aside class="w-64 glass border-r border-purple-500/20 flex flex-col justify-between z-10">
             <div>
-                <div class="h-24 flex items-center justify-center border-b border-purple-500/20">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-12 mr-3 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]"><span class="text-xl font-black text-white glow-text">ADMIN</span>
+                <div class="h-32 flex items-center justify-center border-b border-purple-500/20 px-4">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-3 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] object-contain">
+                    <span class="text-xl font-black text-white glow-text">ADMIN</span>
                 </div>
                 <nav class="p-4 space-y-2 mt-2">
-                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/20 font-bold border border-purple-500/30"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
-                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-key w-6"></i> Key Manager</button>
-                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-tags w-6"></i> Promos</button>
-                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-search w-6"></i> Database</button>
-                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-satellite-dish w-6"></i> Broadcast</button>
-                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-skull w-6"></i> Blacklist</button>
+                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/20 font-bold border border-purple-500/30 transition">
+                        <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+                    </button>
+                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
+                        <i class="fa-solid fa-key w-6"></i> Key Manager
+                    </button>
+                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
+                        <i class="fa-solid fa-tags w-6"></i> Promos
+                    </button>
+                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
+                        <i class="fa-solid fa-search w-6"></i> Database
+                    </button>
+                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
+                        <i class="fa-solid fa-satellite-dish w-6"></i> Broadcast
+                    </button>
+                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
+                        <i class="fa-solid fa-skull w-6"></i> Blacklist
+                    </button>
                 </nav>
             </div>
-            <div class="p-6 border-t border-purple-500/20 text-center"><button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold transition"><i class="fa-solid fa-power-off mr-1"></i> LOGOUT</button></div>
+            <div class="p-6 border-t border-purple-500/20 text-center">
+                <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold transition">
+                    <i class="fa-solid fa-power-off mr-1"></i> LOGOUT
+                </button>
+            </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto p-8 relative">
             <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none z-0"></div>
+            
             <div class="z-10 relative max-w-7xl mx-auto">
                 <header class="flex justify-between items-center mb-8">
                     <h2 id="page-title" class="text-3xl font-black text-white tracking-wide uppercase">Dashboard</h2>
                     <div class="flex items-center gap-3">
                         <span class="text-sm text-gray-400">Logged in as <span id="admin-name" class="text-purple-400 font-bold">Admin</span></span>
-                        <span class="bg-purple-500/20 text-purple-400 border border-purple-500/50 text-xs font-bold px-3 py-1 rounded-full flex items-center shadow-[0_0_10px_rgba(168,85,247,0.3)]"><span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse mr-2"></span> LIVE</span>
+                        <span class="bg-purple-500/20 text-purple-400 border border-purple-500/50 text-xs font-bold px-3 py-1 rounded-full flex items-center shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+                            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse mr-2"></span> LIVE
+                        </span>
                     </div>
                 </header>
 
                 <div id="dash" class="tab-content active">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500"><p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p><h3 class="text-4xl font-black text-white mt-1 glow-text" id="stat-rev">0.00€</h3></div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500"><p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p><h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3></div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500"><p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p><h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3></div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p>
+                            <h3 class="text-4xl font-black text-white mt-1 glow-text" id="stat-rev">0.00€</h3>
+                        </div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p>
+                            <h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3>
+                        </div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
+                            <p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p>
+                            <h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3>
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="lg:col-span-2 glass p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3><canvas id="revenueChart" height="100"></canvas></div>
-                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3><div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div></div>
+                        <div class="lg:col-span-2 glass p-6 rounded-2xl">
+                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3>
+                            <canvas id="revenueChart" height="100"></canvas>
+                        </div>
+                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col">
+                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3>
+                            <div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div id="keys" class="tab-content">
                     <div class="glass rounded-2xl overflow-hidden">
-                        <div class="p-6 border-b border-purple-500/20"><h3 class="text-lg font-bold text-white"><i class="fa-solid fa-key mr-2 text-purple-400"></i>Generated Keys</h3></div>
-                        <div class="overflow-x-auto max-h-[600px]"><table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-black/40 border-b border-purple-500/20 sticky top-0"><tr><th class="px-6 py-4 text-purple-300">Key</th><th class="px-6 py-4 text-purple-300">Type</th><th class="px-6 py-4 text-purple-300">Creator</th><th class="px-6 py-4 text-purple-300">Status</th></tr></thead><tbody id="table-keys" class="divide-y divide-purple-500/10"></tbody></table></div>
+                        <div class="p-6 border-b border-purple-500/20">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-key mr-2 text-purple-400"></i>Generated Keys</h3>
+                        </div>
+                        <div class="overflow-x-auto max-h-[600px]">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-black/40 border-b border-purple-500/20 sticky top-0">
+                                    <tr>
+                                        <th class="px-6 py-4 text-purple-300">Key</th>
+                                        <th class="px-6 py-4 text-purple-300">Type</th>
+                                        <th class="px-6 py-4 text-purple-300">Creator</th>
+                                        <th class="px-6 py-4 text-purple-300">Used By (ID)</th>
+                                        <th class="px-6 py-4 text-purple-300">Status</th>
+                                        <th class="px-6 py-4 text-right text-purple-300">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-keys" class="divide-y divide-purple-500/10"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -221,40 +355,96 @@ WEB_HTML = """
                             <input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 mb-4 text-white outline-none focus:border-pink-500">
                             <button onclick="createPromo()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded-lg transition shadow-lg">Create Code</button>
                         </div>
-                        <div class="md:col-span-2 glass rounded-2xl overflow-hidden"><div class="p-6 border-b border-purple-500/20"><h3 class="text-lg font-bold text-white">Active Promos</h3></div><table class="w-full text-left text-sm"><thead class="text-purple-300 border-b border-purple-500/20 bg-black/40"><tr><th class="p-4">Code</th><th class="p-4">Discount</th><th class="p-4">Uses Left</th><th class="p-4 text-right">Action</th></tr></thead><tbody id="table-promos" class="divide-y divide-purple-500/10"></tbody></table></div>
+                        <div class="md:col-span-2 glass rounded-2xl overflow-hidden">
+                            <div class="p-6 border-b border-purple-500/20">
+                                <h3 class="text-lg font-bold text-white">Active Promos</h3>
+                            </div>
+                            <table class="w-full text-left text-sm">
+                                <thead class="text-purple-300 border-b border-purple-500/20 bg-black/40">
+                                    <tr>
+                                        <th class="p-4">Code</th>
+                                        <th class="p-4">Discount</th>
+                                        <th class="p-4">Uses Left</th>
+                                        <th class="p-4 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-promos" class="divide-y divide-purple-500/10"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div id="lookup" class="tab-content">
-                    <div class="glass p-6 rounded-2xl mb-6 flex gap-4"><input type="text" id="lookup-id" placeholder="Discord User ID..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none"><button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition"><i class="fa-solid fa-search mr-2"></i>Search</button></div>
+                    <div class="glass p-6 rounded-2xl mb-6 flex gap-4">
+                        <input type="text" id="lookup-id" placeholder="Discord User ID..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white focus:border-purple-500 outline-none transition">
+                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition">
+                            <i class="fa-solid fa-search mr-2"></i>Search
+                        </button>
+                    </div>
                     <div id="lookup-result" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500"><p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500"><p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500"><p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Spent</p>
+                                <h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3>
+                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Orders</p>
+                                <h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
+                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500">
+                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p>
+                                <h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3>
+                            </div>
                         </div>
-                        <div class="glass rounded-2xl overflow-hidden"><div class="p-4 border-b border-purple-500/20 font-bold bg-black/40">Purchase History</div><table class="w-full text-left text-sm"><thead class="text-purple-300 border-b border-purple-500/20"><tr><th class="p-4">Invoice</th><th class="p-4">Product</th><th class="p-4">Price</th><th class="p-4">Date</th></tr></thead><tbody id="lu-table" class="divide-y divide-purple-500/10"></tbody></table></div>
+                        <div class="glass rounded-2xl overflow-hidden">
+                            <div class="p-4 border-b border-purple-500/20 font-bold bg-black/40">Purchase History</div>
+                            <table class="w-full text-left text-sm">
+                                <thead class="text-purple-300 border-b border-purple-500/20">
+                                    <tr>
+                                        <th class="p-4">Invoice</th>
+                                        <th class="p-4">Product</th>
+                                        <th class="p-4">Price</th>
+                                        <th class="p-4">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lu-table" class="divide-y divide-purple-500/10"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div id="announce" class="tab-content">
                     <div class="glass p-6 rounded-2xl border-t-2 border-blue-500 max-w-3xl">
                         <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-satellite-dish mr-2 text-blue-400"></i>Server Broadcast</h3>
-                        <input type="text" id="ann-title" placeholder="Title (e.g. 🚀 MEGA UPDATE)" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-3 mb-4 text-white font-bold outline-none focus:border-blue-500">
-                        <textarea id="ann-desc" placeholder="Message content..." rows="6" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-3 mb-4 text-white resize-none outline-none focus:border-blue-500"></textarea>
-                        <input type="text" id="ann-img" placeholder="Image URL (Optional)" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 mb-6 text-white text-sm outline-none focus:border-blue-500">
-                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.4)]"><i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord</button>
+                        <input type="text" id="ann-title" placeholder="Title (e.g. 🚀 MEGA UPDATE)" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-3 mb-4 text-white font-bold outline-none focus:border-blue-500 transition">
+                        <textarea id="ann-desc" placeholder="Message content..." rows="6" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-3 mb-4 text-white resize-none outline-none focus:border-blue-500 transition"></textarea>
+                        <input type="text" id="ann-img" placeholder="Image URL (Optional)" class="w-full bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 mb-6 text-white text-sm outline-none focus:border-blue-500 transition">
+                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                            <i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord
+                        </button>
                     </div>
                 </div>
 
                 <div id="blacklist" class="tab-content">
                     <div class="glass p-6 rounded-2xl mb-6 border-l-4 border-red-500 flex gap-4 items-center">
-                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500">
-                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500">
+                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500 transition">
+                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-black/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500 transition">
                         <button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 font-bold rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.5)]">Ban</button>
                     </div>
-                    <div class="glass rounded-2xl overflow-hidden"><table class="w-full text-left text-sm"><thead class="text-red-300 border-b border-red-500/20 bg-black/40"><tr><th class="p-4">User ID</th><th class="p-4">Reason</th><th class="p-4 text-right">Action</th></tr></thead><tbody id="table-blacklist" class="divide-y divide-purple-500/10"></tbody></table></div>
+                    <div class="glass rounded-2xl overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="text-red-300 border-b border-red-500/20 bg-black/40">
+                                <tr>
+                                    <th class="p-4">User ID</th>
+                                    <th class="p-4">Reason</th>
+                                    <th class="p-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-blacklist" class="divide-y divide-purple-500/10"></tbody>
+                        </table>
+                    </div>
                 </div>
+                
             </div>
         </main>
     </div>
@@ -263,18 +453,30 @@ WEB_HTML = """
         <div class="max-w-4xl mx-auto w-full">
             <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
                 <div class="flex items-center">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-12 mr-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]">
-                    <div><h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Reseller Portal</h1><p class="text-sm text-purple-300 font-bold" id="r-name">Loading...</p></div>
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] object-contain">
+                    <div>
+                        <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Reseller Portal</h1>
+                        <p class="text-sm text-purple-300 font-bold" id="r-name">Loading...</p>
+                    </div>
                 </div>
-                <button onclick="logout()" class="bg-red-500/10 hover:bg-red-600 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-white px-4 py-2 rounded-lg transition font-bold"><i class="fa-solid fa-power-off mr-2"></i>Logout</button>
+                <button onclick="logout()" class="bg-red-500/10 hover:bg-red-600 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-white px-4 py-2 rounded-lg transition font-bold">
+                    <i class="fa-solid fa-power-off mr-2"></i>Logout
+                </button>
             </header>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glass p-6 rounded-2xl border-t-2 border-purple-500">
                     <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access</h2>
                     <div class="space-y-4">
-                        <button onclick="genKey('day_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white"><span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i></button>
-                        <button onclick="genKey('week_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white"><span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i></button>
-                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_15px_rgba(168,85,247,0.4)]"><span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star"></i></button>
+                        <button onclick="genKey('day_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white">
+                            <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                        </button>
+                        <button onclick="genKey('week_1')" class="w-full bg-black/40 hover:bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex justify-between items-center transition text-white">
+                            <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                        </button>
+                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+                            <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="glass p-6 rounded-2xl">
@@ -298,144 +500,383 @@ WEB_HTML = """
         let myChart = null;
 
         function switchAuth(type) {
-            document.getElementById('form-login').classList.add('hidden-view'); document.getElementById('form-register').classList.add('hidden-view');
+            document.getElementById('form-login').classList.add('hidden-view'); 
+            document.getElementById('form-register').classList.add('hidden-view');
             document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
             document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
+            
             document.getElementById('form-' + type).classList.remove('hidden-view');
             document.getElementById('auth-tab-' + type).className = "flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition";
             document.getElementById('auth-error').classList.add('hidden');
         }
 
-        async function apiCall(ep, data) {
+        async function apiCall(endpoint, data) {
             const token = localStorage.getItem('v_token');
             const headers = {'Content-Type': 'application/json'};
-            if(token) headers['Authorization'] = token;
-            const res = await fetch(ep, {method: 'POST', headers: headers, body: JSON.stringify(data)});
-            if(res.status === 401) { logout(); throw new Error(); }
+            if (token) headers['Authorization'] = token;
+            
+            const res = await fetch(endpoint, {
+                method: 'POST', 
+                headers: headers, 
+                body: JSON.stringify(data)
+            });
+            
+            if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register') { 
+                logout(); 
+                throw new Error('Unauthorized'); 
+            }
             return res;
         }
 
-        function err(msg) { const e = document.getElementById('auth-error'); e.innerText = msg; e.classList.remove('hidden'); }
+        function showError(msg) { 
+            const e = document.getElementById('auth-error'); 
+            e.innerText = msg; 
+            e.classList.remove('hidden'); 
+        }
 
         async function login() {
-            const u=document.getElementById('l-user').value, p=document.getElementById('l-pass').value;
-            if(!u||!p) return err("Please fill all fields");
-            const res = await apiCall('/api/login', {user:u, pass:p});
-            if(res.ok) { const d = await res.json(); localStorage.setItem('v_token', d.token); initApp(d.role, d.user); }
-            else err("Invalid username or password");
+            const u = document.getElementById('l-user').value;
+            const p = document.getElementById('l-pass').value;
+            if (!u || !p) return showError("Please fill all fields");
+            
+            const res = await apiCall('/api/login', {user: u, pass: p});
+            if (res.ok) { 
+                const d = await res.json(); 
+                localStorage.setItem('v_token', d.token); 
+                initApp(d.role, d.user); 
+            } else {
+                showError("Invalid username or password");
+            }
         }
 
         async function register() {
-            const u=document.getElementById('r-user').value, p=document.getElementById('r-pass').value, k=document.getElementById('r-key').value;
-            if(!u||!p||!k) return err("Please fill all fields");
-            const res = await apiCall('/api/register', {user:u, pass:p, key:k});
-            if(res.ok) { const d = await res.json(); localStorage.setItem('v_token', d.token); initApp(d.role, d.user); }
-            else { const e = await res.json(); err(e.error || "Registration failed"); }
+            const u = document.getElementById('r-user').value;
+            const p = document.getElementById('r-pass').value;
+            const k = document.getElementById('r-key').value;
+            
+            if (!u || !p || !k) return showError("Please fill all fields");
+            
+            const res = await apiCall('/api/register', {user: u, pass: p, key: k});
+            if (res.ok) { 
+                const d = await res.json(); 
+                localStorage.setItem('v_token', d.token); 
+                initApp(d.role, d.user); 
+            } else { 
+                const e = await res.json(); 
+                showError(e.error || "Registration failed"); 
+            }
         }
 
-        function logout() { localStorage.removeItem('v_token'); location.reload(); }
+        function logout() { 
+            localStorage.removeItem('v_token'); 
+            location.reload(); 
+        }
 
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
-            if(t) {
-                const res = await fetch('/api/verify', {method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})});
-                if(res.ok) { const d = await res.json(); initApp(d.role, d.user); } else logout();
+            if (t) {
+                const res = await fetch('/api/verify', {
+                    method: 'POST', 
+                    headers: {'Authorization': t, 'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({})
+                });
+                if (res.ok) { 
+                    const d = await res.json(); 
+                    initApp(d.role, d.user); 
+                } else {
+                    logout();
+                }
             }
         }
 
         function initApp(role, name) {
             document.getElementById('view-auth').classList.add('hidden-view');
-            if(role === 'admin') { document.getElementById('view-admin').classList.remove('hidden-view'); document.getElementById('admin-name').innerText=name; nav('dash'); } 
-            else if(role === 'reseller') { document.getElementById('view-reseller').classList.remove('hidden-view'); document.getElementById('r-name').innerText=name; loadResellerKeys(); }
+            if (role === 'admin') { 
+                document.getElementById('view-admin').classList.remove('hidden-view'); 
+                document.getElementById('admin-name').innerText = name; 
+                nav('dash'); 
+            } else if (role === 'reseller') { 
+                document.getElementById('view-reseller').classList.remove('hidden-view'); 
+                document.getElementById('r-name').innerText = name; 
+                loadResellerKeys(); 
+            }
         }
 
         function nav(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach(el => { el.className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"; });
+            
+            document.querySelectorAll('.nav-btn').forEach(el => { 
+                el.className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"; 
+            });
             document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/20 font-bold border border-purple-500/30 shadow-inner";
-            const titles = {'dash': 'Overview', 'keys': 'Keys & Logs', 'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Broadcast', 'blacklist': 'Blacklist'};
+            
+            const titles = {
+                'dash': 'Overview', 
+                'keys': 'Keys & Logs', 
+                'promos': 'Promo Codes', 
+                'lookup': 'User Lookup', 
+                'announce': 'Broadcast', 
+                'blacklist': 'Blacklist'
+            };
             document.getElementById('page-title').innerText = titles[tabId];
-            if(tabId === 'dash') { loadDashboard(); loadActivity(); }
-            if(tabId === 'keys') loadKeys();
-            if(tabId === 'promos') loadPromos();
-            if(tabId === 'blacklist') loadBlacklist();
+            
+            if (tabId === 'dash') { loadDashboard(); loadActivity(); }
+            if (tabId === 'keys') loadKeys();
+            if (tabId === 'promos') loadPromos();
+            if (tabId === 'blacklist') loadBlacklist();
         }
 
         async function loadDashboard() {
-            const res = await apiCall('/api/stats', {}); const data = await res.json();
-            document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€'; document.getElementById('stat-orders').innerText = data.buyers_today; document.getElementById('stat-keys').innerText = data.active_keys;
+            const res = await apiCall('/api/stats', {}); 
+            const data = await res.json();
+            
+            document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€'; 
+            document.getElementById('stat-orders').innerText = data.buyers_today; 
+            document.getElementById('stat-keys').innerText = data.active_keys;
+            
             const ctx = document.getElementById('revenueChart').getContext('2d');
-            if(myChart) myChart.destroy();
+            if (myChart) myChart.destroy();
+            
             myChart = new Chart(ctx, {
-                type: 'line', data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } }
+                type: 'line', 
+                data: { 
+                    labels: data.chart_labels, 
+                    datasets: [{ 
+                        label: 'Revenue (€)', 
+                        data: data.chart_data, 
+                        borderColor: '#a855f7', 
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)', 
+                        borderWidth: 3, 
+                        fill: true, 
+                        tension: 0.4 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: {display: false} }, 
+                    scales: { 
+                        y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, 
+                        x: {grid: {color: 'rgba(168,85,247,0.1)'}} 
+                    } 
+                }
             });
         }
+
         async function loadActivity() {
-            const res = await apiCall('/api/activity', {}); const data = await res.json();
-            document.getElementById('activity-feed').innerHTML = data.map(a => `<div class="p-3 bg-black/40 rounded-lg border border-purple-500/10 flex justify-between items-center"><div><span class="font-bold text-purple-400 text-xs mr-2">${a.user}</span><span class="text-sm text-gray-300">${a.action}</span></div><span class="text-xs text-gray-600">${a.time.split('T')[1].substring(0,5)}</span></div>`).join('');
+            const res = await apiCall('/api/activity', {}); 
+            const data = await res.json();
+            document.getElementById('activity-feed').innerHTML = data.map(a => `
+                <div class="p-3 bg-black/40 rounded-lg border border-purple-500/10 flex justify-between items-center">
+                    <div>
+                        <span class="font-bold text-purple-400 text-xs mr-2">${a.user}</span>
+                        <span class="text-sm text-gray-300">${a.action}</span>
+                    </div>
+                    <span class="text-xs text-gray-600">${a.time.split('T')[1].substring(0,5)}</span>
+                </div>
+            `).join('');
         }
+
         async function loadKeys() {
-            const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
+            const res = await apiCall('/api/keys', {}); 
+            const data = await res.json(); 
+            const tb = document.getElementById('table-keys');
+            
+            if (Object.keys(data).length === 0) {
+                return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
+            }
+            
             tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
-                const badge = info.used ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>' : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs border border-green-500/20">Active</span>';
+                let badge = info.used ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>' : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs border border-green-500/20">Active</span>';
+                if (info.revoked) {
+                    badge = '<span class="px-2 py-1 rounded bg-gray-500/10 text-gray-400 text-xs border border-gray-500/20">Banned</span>';
+                }
+                
                 const creator = info.created_by ? `<span class="text-blue-400 font-bold">${info.created_by}</span>` : 'System';
-                return `<tr class="hover:bg-purple-500/10"><td class="px-6 py-4 font-mono text-purple-300">${key}</td><td class="px-6 py-4 text-gray-300">${info.type}</td><td class="px-6 py-4">${creator}</td><td class="px-6 py-4">${badge}</td></tr>`;
+                const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs">${info.used_by}</span>` : '-';
+                const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-2 py-1 rounded transition shadow-lg">Ban Key</button>` : '-';
+                
+                return `
+                    <tr class="hover:bg-purple-500/10 transition">
+                        <td class="px-6 py-4 font-mono text-purple-300">${key}</td>
+                        <td class="px-6 py-4 text-gray-300">${info.type}</td>
+                        <td class="px-6 py-4">${creator}</td>
+                        <td class="px-6 py-4">${usedBy}</td>
+                        <td class="px-6 py-4">${badge}</td>
+                        <td class="px-6 py-4 text-right">${act}</td>
+                    </tr>
+                `;
             }).join('');
         }
+
+        async function revokeKey(k) { 
+            if (confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')) { 
+                await apiCall('/api/keys/revoke', {key: k}); 
+                loadKeys(); 
+            } 
+        }
+
         async function loadPromos() {
-            const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active promos.</td></tr>';
-            tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-purple-500/10"><td class="p-4 font-mono font-bold text-pink-400">${code}</td><td class="p-4 text-purple-300">-${info.discount}%</td><td class="p-4 text-gray-300">${info.uses}</td><td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+            const res = await apiCall('/api/promos', {}); 
+            const data = await res.json(); 
+            const tb = document.getElementById('table-promos');
+            
+            if (Object.keys(data).length === 0) {
+                return tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active promos.</td></tr>';
+            }
+            
+            tb.innerHTML = Object.entries(data).map(([code, info]) => `
+                <tr class="hover:bg-purple-500/10 transition">
+                    <td class="p-4 font-mono font-bold text-pink-400">${code}</td>
+                    <td class="p-4 text-purple-300">-${info.discount}%</td>
+                    <td class="p-4 text-gray-300">${info.uses}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="rmPromo('${code}')" class="text-red-400 hover:text-red-300 transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
         }
+
         async function createPromo() {
-            const c=document.getElementById('p-code').value.toUpperCase(), d=document.getElementById('p-disc').value, u=document.getElementById('p-uses').value;
-            if(!c||!d||!u) return alert("Fill all fields"); await apiCall('/api/promos/add', {code:c, discount:parseInt(d), uses:parseInt(u)});
-            document.getElementById('p-code').value=''; document.getElementById('p-disc').value=''; document.getElementById('p-uses').value=''; loadPromos();
+            const c = document.getElementById('p-code').value.toUpperCase();
+            const d = document.getElementById('p-disc').value;
+            const u = document.getElementById('p-uses').value;
+            
+            if (!c || !d || !u) return alert("Please fill all fields"); 
+            await apiCall('/api/promos/add', {code: c, discount: parseInt(d), uses: parseInt(u)});
+            
+            document.getElementById('p-code').value = ''; 
+            document.getElementById('p-disc').value = ''; 
+            document.getElementById('p-uses').value = ''; 
+            loadPromos();
         }
-        async function rmPromo(code) { await apiCall('/api/promos/remove', {code:code}); loadPromos(); }
+
+        async function rmPromo(code) { 
+            await apiCall('/api/promos/remove', {code: code}); 
+            loadPromos(); 
+        }
         
         async function lookupUser() {
-            const uid = document.getElementById('lookup-id').value; if(!uid) return;
-            const res = await apiCall('/api/lookup', {user_id:uid}); const data = await res.json();
+            const uid = document.getElementById('lookup-id').value; 
+            if (!uid) return;
+            
+            const res = await apiCall('/api/lookup', {user_id: uid}); 
+            const data = await res.json();
+            
             document.getElementById('lookup-result').classList.remove('hidden');
-            document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; document.getElementById('lu-orders').innerText = data.total_orders;
+            document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; 
+            document.getElementById('lu-orders').innerText = data.total_orders;
+            
             const b = document.getElementById('lu-banned');
-            if(data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-black text-red-500 mt-2 glow-text"; } else { b.innerText = "Clean"; b.className = "text-xl font-bold text-green-400 mt-2"; }
+            if (data.is_banned) { 
+                b.innerText = "BANNED"; 
+                b.className = "text-xl font-black text-red-500 mt-2 glow-text"; 
+            } else { 
+                b.innerText = "Clean"; 
+                b.className = "text-xl font-bold text-green-400 mt-2"; 
+            }
+            
             const tb = document.getElementById('lu-table');
-            if(data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No purchases found.</td></tr>';
-            else tb.innerHTML = data.invoices.map(i => `<tr><td class="p-4 font-mono text-xs text-gray-500">${i.id}</td><td class="p-4 text-purple-300">${i.product}</td><td class="p-4 font-bold text-green-400">${i.price}€</td><td class="p-4 text-xs">${i.date.split('T')[0]}</td></tr>`).join('');
+            if (data.invoices.length === 0) {
+                tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No purchases found.</td></tr>';
+            } else {
+                tb.innerHTML = data.invoices.map(i => `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="p-4 font-mono text-xs text-gray-500">${i.id}</td>
+                        <td class="p-4 text-purple-300">${i.product}</td>
+                        <td class="p-4 font-bold text-green-400">${i.price}€</td>
+                        <td class="p-4 text-xs text-gray-400">${i.date.split('T')[0]}</td>
+                    </tr>
+                `).join('');
+            }
         }
+
         async function sendAnnounce() {
-            const t = document.getElementById('ann-title').value, d = document.getElementById('ann-desc').value, i = document.getElementById('ann-img').value;
-            if(!t || !d) return alert("Title and Description required!");
-            await apiCall('/api/announce', {title:t, desc:d, img:i}); alert("Broadcast sent!");
-            document.getElementById('ann-title').value=''; document.getElementById('ann-desc').value=''; document.getElementById('ann-img').value='';
+            const t = document.getElementById('ann-title').value;
+            const d = document.getElementById('ann-desc').value;
+            const i = document.getElementById('ann-img').value;
+            
+            if (!t || !d) return alert("Title and Description required!");
+            
+            await apiCall('/api/announce', {title: t, desc: d, img: i}); 
+            alert("Broadcast sent successfully!");
+            
+            document.getElementById('ann-title').value = ''; 
+            document.getElementById('ann-desc').value = ''; 
+            document.getElementById('ann-img').value = '';
         }
+
         async function loadBlacklist() {
-            const res = await apiCall('/api/blacklist', {}); const data = await res.json(); const tb = document.getElementById('table-blacklist');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">Blacklist is empty.</td></tr>';
-            tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-red-500/10"><td class="p-4 font-mono text-red-300">${uid}</td><td class="p-4 text-gray-400">${info.reason}</td><td class="p-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+            const res = await apiCall('/api/blacklist', {}); 
+            const data = await res.json(); 
+            const tb = document.getElementById('table-blacklist');
+            
+            if (Object.keys(data).length === 0) {
+                return tb.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">Blacklist is empty.</td></tr>';
+            }
+            
+            tb.innerHTML = Object.entries(data).map(([uid, info]) => `
+                <tr class="hover:bg-red-500/10 transition">
+                    <td class="p-4 font-mono text-red-300">${uid}</td>
+                    <td class="p-4 text-gray-400">${info.reason}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="rmBlacklist('${uid}')" class="text-red-500 hover:text-red-400 transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
         }
+
         async function addBlacklist() {
-            const uid=document.getElementById('bl-id').value, rsn=document.getElementById('bl-reason').value||"Web Ban"; if(!uid) return; 
-            await apiCall('/api/blacklist/add', {user_id:uid, reason:rsn}); document.getElementById('bl-id').value=''; document.getElementById('bl-reason').value=''; loadBlacklist();
+            const uid = document.getElementById('bl-id').value;
+            const rsn = document.getElementById('bl-reason').value || "Web Ban"; 
+            
+            if (!uid) return; 
+            
+            await apiCall('/api/blacklist/add', {user_id: uid, reason: rsn}); 
+            document.getElementById('bl-id').value = ''; 
+            document.getElementById('bl-reason').value = ''; 
+            loadBlacklist();
         }
-        async function rmBlacklist(uid) { await apiCall('/api/blacklist/remove', {user_id:uid}); loadBlacklist(); }
+
+        async function rmBlacklist(uid) { 
+            await apiCall('/api/blacklist/remove', {user_id: uid}); 
+            loadBlacklist(); 
+        }
 
         // RESELLER FUNCTIONS
         async function loadResellerKeys() {
-            const res = await apiCall('/api/reseller/data', {}); const data = await res.json();
-            if(data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-4 text-center">Noch keine Keys generiert.</p>';
-            else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `<div class="bg-black/40 p-3 rounded-lg border border-purple-500/20 flex justify-between items-center"><span class="font-mono text-sm text-purple-300">${k.key}</span><span class="text-xs font-bold px-2 py-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">${k.type}</span></div>`).join('');
+            const res = await apiCall('/api/reseller/data', {}); 
+            const data = await res.json();
+            
+            if (data.my_keys.length === 0) {
+                document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-4 text-center">Noch keine Keys generiert.</p>';
+            } else {
+                document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `
+                    <div class="bg-black/40 p-4 rounded-lg border border-purple-500/20 flex justify-between items-center transition hover:border-purple-500/50">
+                        <span class="font-mono text-sm text-purple-300">${k.key}</span>
+                        <span class="text-xs font-bold px-3 py-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">${k.type}</span>
+                    </div>
+                `).join('');
+            }
         }
+
         async function genKey(type) {
-            const res = await apiCall('/api/reseller/generate', {t:type}); const d = await res.json();
-            document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); loadResellerKeys();
+            const res = await apiCall('/api/reseller/generate', {t: type}); 
+            const d = await res.json();
+            
+            document.getElementById('new-key').value = d.key; 
+            document.getElementById('key-modal').classList.remove('hidden-view'); 
+            loadResellerKeys();
         }
-        function closeModal() { document.getElementById('key-modal').classList.add('hidden-view'); }
+
+        function closeModal() { 
+            document.getElementById('key-modal').classList.add('hidden-view'); 
+        }
 
         window.onload = checkAuthOnLoad;
     </script>
@@ -443,156 +884,287 @@ WEB_HTML = """
 </html>
 """.replace("LOGO_URL_PLACEHOLDER", WEBSITE_LOGO_URL)
 
-# --- API ENDPOINTS (WEB SERVER) ---
+# =========================================================
+# 🌍 API ENDPOINTS (WEB SERVER)
+# =========================================================
 def get_user_from_token(request):
     token = request.headers.get("Authorization")
-    if not token or token not in web_sessions: return None
+    if not token or token not in web_sessions: 
+        return None
     return web_sessions[token]
 
-async def handle_index(request): return web.Response(text=WEB_HTML, content_type='text/html')
+async def handle_index(request): 
+    return web.Response(text=WEB_HTML, content_type='text/html')
 
 async def api_register(request):
-    d = await request.json(); u = d.get("user"); p = d.get("pass"); k = d.get("key", "").upper()
-    if not u or not p or not k: return web.json_response({"error": "Missing fields"}, status=400)
-    if u in users_db: return web.json_response({"error": "Username already exists"}, status=400)
-    if k not in webkeys_db or webkeys_db[k].get("used"): return web.json_response({"error": "Invalid or used invitation key"}, status=400)
+    data = await request.json()
+    username = data.get("user")
+    password = data.get("pass")
+    inv_key = data.get("key", "").upper()
     
-    role = webkeys_db[k]["role"]
-    users_db[u] = {"pass": p, "role": role}
-    webkeys_db[k]["used"] = True
-    save_json(USERS_FILE, users_db); save_json(WEBKEYS_FILE, webkeys_db)
-    log_activity(f"New User Registered ({role})", u)
+    if not username or not password or not inv_key: 
+        return web.json_response({"error": "Missing fields"}, status=400)
+    if username in users_db: 
+        return web.json_response({"error": "Username already exists"}, status=400)
+    if inv_key not in webkeys_db or webkeys_db[inv_key].get("used"): 
+        return web.json_response({"error": "Invalid or used invitation key"}, status=400)
     
-    token = str(uuid.uuid4()); web_sessions[token] = {"user": u, "role": role}
-    return web.json_response({"ok": True, "token": token, "role": role, "user": u})
+    role = webkeys_db[inv_key]["role"]
+    users_db[username] = {"pass": password, "role": role}
+    webkeys_db[inv_key]["used"] = True
+    
+    save_json(USERS_FILE, users_db)
+    save_json(WEBKEYS_FILE, webkeys_db)
+    log_activity(f"New User Registered ({role})", username)
+    
+    token = str(uuid.uuid4())
+    web_sessions[token] = {"user": username, "role": role}
+    return web.json_response({"ok": True, "token": token, "role": role, "user": username})
 
 async def api_login(request):
-    d = await request.json(); u = d.get("user"); p = d.get("pass")
-    if u in users_db and users_db[u]["pass"] == p:
-        token = str(uuid.uuid4()); role = users_db[u]["role"]
-        web_sessions[token] = {"user": u, "role": role}
-        return web.json_response({"ok": True, "token": token, "role": role, "user": u})
+    data = await request.json()
+    username = data.get("user")
+    password = data.get("pass")
+    
+    if username in users_db and users_db[username]["pass"] == password:
+        token = str(uuid.uuid4())
+        role = users_db[username]["role"]
+        web_sessions[token] = {"user": username, "role": role}
+        return web.json_response({"ok": True, "token": token, "role": role, "user": username})
+        
     return web.Response(status=401)
 
 async def api_verify(request):
     user = get_user_from_token(request)
-    if user: return web.json_response({"ok": True, "role": user["role"], "user": user["user"]})
+    if user: 
+        return web.json_response({"ok": True, "role": user["role"], "user": user["user"]})
     return web.Response(status=401)
 
 async def api_stats(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    now = now_utc(); today_buyers = set(); total_rev = 0.0
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    now = now_utc()
+    today_buyers = set()
+    total_rev = 0.0
     days = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
-    labels = [d.strftime("%a") for d in days]; rev_data = {d: 0.0 for d in days}
+    labels = [d.strftime("%a") for d in days]
+    rev_data = {d: 0.0 for d in days}
+    
     for inv_id, data in invoices_db.items():
-        price = float(data.get("final_price_eur", 0)); total_rev += price
+        price = float(data.get("final_price_eur", 0))
+        total_rev += price
         try:
             d = datetime.fromisoformat(data["created_at"]).date()
-            if d == now.date(): today_buyers.add(data["buyer_id"])
-            if d in rev_data: rev_data[d] += price
-        except: pass
-    active_k = sum(1 for k, v in keys_db.items() if not v["used"])
-    return web.json_response({"total_revenue": total_rev, "buyers_today": len(today_buyers), "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())})
+            if d == now.date(): 
+                today_buyers.add(data["buyer_id"])
+            if d in rev_data: 
+                rev_data[d] += price
+        except Exception: 
+            pass
+            
+    active_k = sum(1 for k, v in keys_db.items() if not v.get("used"))
+    
+    return web.json_response({
+        "total_revenue": total_rev, 
+        "buyers_today": len(today_buyers), 
+        "active_keys": active_k, 
+        "chart_labels": labels, 
+        "chart_data": list(rev_data.values())
+    })
 
 async def api_activity(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
     return web.json_response(activity_db)
 
 async def api_keys(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
     return web.json_response(keys_db)
 
+async def api_revoke_key(request):
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    key = data.get("key")
+    
+    if key in keys_db:
+        if keys_db[key].get("used") and keys_db[key].get("used_by"):
+            uid = str(keys_db[key]["used_by"])
+            guild = bot.get_guild(GUILD_ID)
+            if guild:
+                member = guild.get_member(int(uid))
+                role = guild.get_role(REDEEM_ROLE_ID)
+                if member and role:
+                    try: 
+                        await member.remove_roles(role, reason="Key banned by Admin")
+                    except Exception: 
+                        pass
+                        
+            if uid in redeemed_db: 
+                del redeemed_db[uid]
+                save_json(REDEEMED_FILE, redeemed_db)
+                
+        keys_db[key]["revoked"] = True
+        keys_db[key]["used"] = True
+        save_json(KEYS_FILE, keys_db)
+        log_activity(f"Banned Key {key}", user_info["user"])
+        
+    return web.json_response({"ok": True})
+
 async def api_promos(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
     return web.json_response(promos_db)
 
 async def api_add_promo(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    promos_db[data["code"]] = {
+        "discount": data["discount"], 
+        "uses": data["uses"]
+    }
     save_json(PROMOS_FILE, promos_db)
-    log_activity(f"Created Promo {d['code']}", u["user"])
+    log_activity(f"Created Promo {data['code']}", user_info["user"])
     return web.json_response({"ok": True})
 
 async def api_rm_promo(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    c = d["code"]
-    if c in promos_db:
-        del promos_db[c]
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    code = data["code"]
+    if code in promos_db: 
+        del promos_db[code]
         save_json(PROMOS_FILE, promos_db)
+        
     return web.json_response({"ok": True})
 
 async def api_lookup(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    target = (await request.json()).get("user_id"); spent = 0.0; invs = []
-    for i_id, data in invoices_db.items():
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    target = (await request.json()).get("user_id")
+    spent = 0.0
+    invs = []
+    
+    for inv_id, data in invoices_db.items():
         if data["buyer_id"] == target:
             spent += float(data.get("final_price_eur", 0))
-            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label","Unk"), "price": data.get("final_price_eur",0), "date": data["created_at"]})
-    return web.json_response({"total_spent": spent, "total_orders": len(invs), "is_banned": target in blacklist_db, "invoices": invs[::-1]})
+            invs.append({
+                "id": inv_id, 
+                "product": PRODUCTS.get(data["product_type"], {}).get("label", "Unknown"), 
+                "price": data.get("final_price_eur", 0), 
+                "date": data["created_at"]
+            })
+            
+    return web.json_response({
+        "total_spent": spent, 
+        "total_orders": len(invs), 
+        "is_banned": target in blacklist_db, 
+        "invoices": invs[::-1]
+    })
 
 async def api_announce(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
-    if ch:
-        emb = discord.Embed(title=d["title"], description=d["desc"], color=COLOR_MAIN)
-        if d.get("img"): emb.set_image(url=d["img"])
-        await ch.send(embed=emb)
-        log_activity("Sent Discord Broadcast", u["user"])
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    
+    if channel:
+        embed = discord.Embed(title=data["title"], description=data["desc"], color=COLOR_MAIN)
+        if data.get("img"): 
+            embed.set_image(url=data["img"])
+        await channel.send(embed=embed)
+        log_activity("Sent Discord Broadcast", user_info["user"])
+        
     return web.json_response({"ok": True})
 
 async def api_blacklist(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
     return web.json_response(blacklist_db)
 
 async def api_add_blacklist(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    uid = d.get("user_id")
-    rsn = d.get("reason", "Web Ban")
-    if uid:
-        blacklist_db[uid] = {"reason": rsn, "added_by": u["user"], "added_at": iso_now()}
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    uid = data.get("user_id")
+    rsn = data.get("reason", "Web Ban")
+    
+    if uid: 
+        blacklist_db[uid] = {
+            "reason": rsn, 
+            "added_by": user_info["user"], 
+            "added_at": iso_now()
+        }
         save_json(BLACKLIST_FILE, blacklist_db)
-        log_activity(f"Banned {uid}", u["user"])
+        log_activity(f"Banned User {uid}", user_info["user"])
+        
     return web.json_response({"ok": True})
 
 async def api_rm_blacklist(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
     uid = (await request.json()).get("user_id")
-    if uid in blacklist_db:
+    if uid in blacklist_db: 
         del blacklist_db[uid]
         save_json(BLACKLIST_FILE, blacklist_db)
-        log_activity(f"Unbanned {uid}", u["user"])
+        log_activity(f"Unbanned User {uid}", user_info["user"])
+        
     return web.json_response({"ok": True})
 
 async def api_reseller_data(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "reseller": return web.Response(status=401)
-    my_keys = [{"key": k, "type": PRODUCTS.get(v["type"],{}).get("label","Unk")} for k, v in keys_db.items() if v.get("created_by") == u["user"]]
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "reseller": 
+        return web.Response(status=401)
+        
+    my_keys = [{
+        "key": k, 
+        "type": PRODUCTS.get(v["type"], {}).get("label", "Unknown")
+    } for k, v in keys_db.items() if v.get("created_by") == user_info["user"]]
+    
     return web.json_response({"my_keys": my_keys})
 
 async def api_reseller_gen(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "reseller": return web.Response(status=401)
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "reseller": 
+        return web.Response(status=401)
+        
     ptype = (await request.json()).get("t", "day_1")
     prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
-    keys_db[new_key] = {"type": ptype, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "created_by": u["user"]}
+    
+    keys_db[new_key] = {
+        "type": ptype, 
+        "used": False, 
+        "used_by": None, 
+        "bound_user_id": None, 
+        "created_at": iso_now(), 
+        "created_by": user_info["user"]
+    }
     save_json(KEYS_FILE, keys_db)
-    log_activity(f"Created {ptype} Key", u["user"])
+    log_activity(f"Created {ptype} Key", user_info["user"])
+    
     return web.json_response({"key": new_key})
 
 async def start_web_server():
@@ -605,11 +1177,15 @@ async def start_web_server():
     app.router.add_post('/api/stats', api_stats)
     app.router.add_post('/api/activity', api_activity)
     app.router.add_post('/api/keys', api_keys)
+    app.router.add_post('/api/keys/revoke', api_revoke_key)
+    
     app.router.add_post('/api/promos', api_promos)
     app.router.add_post('/api/promos/add', api_add_promo)
     app.router.add_post('/api/promos/remove', api_rm_promo)
+    
     app.router.add_post('/api/lookup', api_lookup)
     app.router.add_post('/api/announce', api_announce)
+    
     app.router.add_post('/api/blacklist', api_blacklist)
     app.router.add_post('/api/blacklist/add', api_add_blacklist)
     app.router.add_post('/api/blacklist/remove', api_rm_blacklist)
@@ -622,43 +1198,78 @@ async def start_web_server():
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
+    print(f"✅ Web Server läuft auf Port {port}")
 
 # =========================================================
 # BOT COMMANDS & TICKET LOGIC
 # =========================================================
-def premium_divider() -> str: return "━━━━━━━━━━━━━━━━━━━━━━━━"
-def short_txid(txid: str) -> str: return txid if len(txid) < 20 else f"{txid[:14]}...{txid[-14:]}"
-def format_price(value: float) -> str: return str(int(value)) if float(value).is_integer() else f"{value:.2f}"
-def is_reseller_dc(member: discord.Member | None) -> bool: return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
+def premium_divider() -> str: 
+    return "━━━━━━━━━━━━━━━━━━━━━━━━"
+
+def short_txid(txid: str) -> str: 
+    return txid if len(txid) < 20 else f"{txid[:14]}...{txid[-14:]}"
+
+def format_price(value: float) -> str: 
+    return str(int(value)) if float(value).is_integer() else f"{value:.2f}"
+
+def is_reseller_dc(member: discord.Member | None) -> bool: 
+    return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
 
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
     base_price = PRODUCTS[product_key]["price_eur"]
-    if is_reseller_dc(member): base_price = round(base_price * 0.5, 2)
-    if promo_discount > 0: base_price = round(base_price * (1 - (promo_discount / 100.0)), 2)
+    if is_reseller_dc(member): 
+        base_price = round(base_price * 0.5, 2)
+    if promo_discount > 0: 
+        base_price = round(base_price * (1 - (promo_discount / 100.0)), 2)
     return float(base_price)
 
 async def dm_user_safe(user: discord.abc.User, content: str = None, embed: discord.Embed = None):
-    try: await user.send(content=content, embed=embed)
-    except: pass
+    try: 
+        await user.send(content=content, embed=embed)
+    except Exception: 
+        pass
 
-def generate_key(product_type: str, ticket_id: int | None = None, creator="System") -> str:
+def generate_key(product_type: str, ticket_id: str | None = None, creator="System") -> str:
     prefix = PRODUCTS[product_type]["key_prefix"]
     while True:
         key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
         if key not in keys_db:
-            keys_db[key] = {"type": product_type, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "redeemed_at": None, "approved_in_ticket": ticket_id, "created_by": creator}
+            keys_db[key] = {
+                "type": product_type, 
+                "used": False, 
+                "used_by": None, 
+                "bound_user_id": None, 
+                "created_at": iso_now(), 
+                "redeemed_at": None, 
+                "approved_in_ticket": ticket_id, 
+                "created_by": creator
+            }
             save_json(KEYS_FILE, keys_db)
             log_activity("Generierte einen Key", creator)
             return key
 
 def create_invoice_record(invoice_id, buyer_id, product_type, payment_key, key, ticket_id, final_price_eur, reseller_discount):
-    invoices_db[invoice_id] = {"buyer_id": str(buyer_id), "product_type": product_type, "payment_key": payment_key, "key": key, "ticket_id": str(ticket_id), "created_at": iso_now(), "final_price_eur": final_price_eur, "reseller_discount": reseller_discount}
+    invoices_db[invoice_id] = {
+        "buyer_id": str(buyer_id), 
+        "product_type": product_type, 
+        "payment_key": payment_key, 
+        "key": key, 
+        "ticket_id": str(ticket_id), 
+        "created_at": iso_now(), 
+        "final_price_eur": final_price_eur, 
+        "reseller_discount": reseller_discount
+    }
     save_json(INVOICES_FILE, invoices_db)
     log_activity(f"Neue Order ({final_price_eur}€)", buyer_id)
 
-def extract_possible_paysafe_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
-def extract_possible_amazon_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
-def litoshi_to_ltc(value: int) -> float: return value / 100_000_000
+def extract_possible_paysafe_codes(text: str): 
+    return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
+
+def extract_possible_amazon_codes(text: str): 
+    return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
+
+def litoshi_to_ltc(value: int) -> float: 
+    return value / 100_000_000
 
 def tx_matches_our_address(tx_data: dict, expected_address: str) -> tuple[bool, int]:
     total_received = 0
@@ -672,18 +1283,21 @@ def tx_matches_our_address(tx_data: dict, expected_address: str) -> tuple[bool, 
 async def fetch_ltc_tx(txid: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(f"https://api.blockcypher.com/v1/ltc/main/txs/{txid}", timeout=20) as resp:
-            if resp.status != 200: return None, f"API error"
+            if resp.status != 200: 
+                return None, f"API error"
             return await resp.json(), None
 
 async def fetch_ltc_price_eur():
     async with aiohttp.ClientSession() as session:
         async with session.get("https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=eur", timeout=20) as resp:
-            if resp.status != 200: return None
+            if resp.status != 200: 
+                return None
             return (await resp.json()).get("litecoin", {}).get("eur")
 
 async def find_existing_ticket(guild: discord.Guild, user: discord.Member):
     for channel in guild.text_channels:
-        if channel.topic == f"ticket_owner:{user.id}": return channel
+        if channel.topic == f"ticket_owner:{user.id}": 
+            return channel
     return None
 
 # --- EMBEDS ---
@@ -719,7 +1333,7 @@ def build_order_summary(product_key: str, payment_key: str, user: discord.Member
     )
 
 def build_payment_summary_embed(channel_id: int) -> discord.Embed:
-    data = ticket_data.get(channel_id, {})
+    data = ticket_data.get(str(channel_id), {})
     user = bot.get_guild(GUILD_ID).get_member(data.get("user_id")) if bot.get_guild(GUILD_ID) and data.get("user_id") else None
     
     product_key = data.get("product_key")
@@ -751,12 +1365,12 @@ def build_payment_summary_embed(channel_id: int) -> discord.Embed:
     return embed
 
 async def update_payment_summary_message(channel: discord.TextChannel):
-    data = ticket_data.get(channel.id)
+    data = ticket_data.get(str(channel.id))
     if data and data.get("summary_message_id"):
         try: 
             msg = await channel.fetch_message(data["summary_message_id"])
             await msg.edit(embed=build_payment_summary_embed(channel.id), view=PaymentSummaryView())
-        except: 
+        except Exception: 
             pass
 
 async def send_admin_panel_to_channel(guild: discord.Guild, owner_id: int, ticket_channel_id: int):
@@ -766,18 +1380,21 @@ async def send_admin_panel_to_channel(guild: discord.Guild, owner_id: int, ticke
             embed=discord.Embed(title="🛠️ GEN ADMIN PANEL", description=f"{premium_divider()}\n**Buyer ID:** `{owner_id}`\n**Ticket ID:** `{ticket_channel_id}`\n{premium_divider()}", color=COLOR_ADMIN), 
             view=AdminPanelView(owner_id=owner_id, ticket_channel_id=ticket_channel_id)
         )
-        if ticket_channel_id in ticket_data: 
-            ticket_data[ticket_channel_id]["admin_message_id"] = msg.id
+        if str(ticket_channel_id) in ticket_data: 
+            ticket_data[str(ticket_channel_id)]["admin_message_id"] = msg.id
+            save_json(TICKETS_FILE, ticket_data)
 
 async def send_summary_and_admin_panels(channel: discord.TextChannel, owner_id: int):
     summary_msg = await channel.send(embed=build_payment_summary_embed(channel.id), view=PaymentSummaryView())
-    ticket_data[channel.id]["summary_message_id"] = summary_msg.id
+    ticket_data[str(channel.id)]["summary_message_id"] = summary_msg.id
+    save_json(TICKETS_FILE, ticket_data)
     await send_admin_panel_to_channel(channel.guild, owner_id, channel.id)
 
 # --- REDEEM LOGIC ---
 async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key: str):
     if is_blacklisted(member.id): return False, "You are blacklisted."
     if key not in keys_db: return False, "Key not found."
+    if keys_db[key].get("revoked"): return False, "This key has been banned."
     if keys_db[key]["used"]: return False, "Already used."
     pt = keys_db[key]["type"]
     r = guild.get_role(REDEEM_ROLE_ID)
@@ -800,17 +1417,18 @@ class CloseConfirmView(discord.ui.View):
     @discord.ui.button(label="Confirm Close", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def confirm_close(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
         if data and data.get("admin_message_id"):
             admin_channel = interaction.guild.get_channel(ADMIN_PANEL_CHANNEL_ID)
             if isinstance(admin_channel, discord.TextChannel):
                 try: 
                     msg = await admin_channel.fetch_message(data["admin_message_id"])
                     await msg.delete()
-                except: 
+                except Exception: 
                     pass
                     
-        ticket_data.pop(interaction.channel.id, None)
+        ticket_data.pop(str(interaction.channel.id), None)
+        save_json(TICKETS_FILE, ticket_data)
         await asyncio.sleep(2)
         await interaction.channel.delete()
 
@@ -819,11 +1437,11 @@ class TicketManageView(discord.ui.View):
         super().__init__(timeout=None)
         self.owner_id = owner_id
         
-    @discord.ui.button(label="Claim", style=discord.ButtonStyle.secondary, emoji="🎫", custom_id="claim_ticket_button")
+    @discord.ui.button(label="Claim", style=discord.ButtonStyle.secondary, emoji="🎫")
     async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_message(f"{interaction.user.mention} claimed this ticket.")
         
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_ticket_button")
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒")
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: 
             return await interaction.response.send_message("No permission.", ephemeral=True)
@@ -840,13 +1458,17 @@ class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
         if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: 
             return await interaction.response.send_message("Only buyer.", ephemeral=True)
             
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         code = str(self.code_input).strip().upper()
         
         if code not in promos_db or promos_db[code]["uses"] <= 0: 
             return await interaction.response.send_message("❌ Ungültiger Code.", ephemeral=True)
             
         data["applied_promo"] = code
+        save_json(TICKETS_FILE, ticket_data)
         await update_payment_summary_message(interaction.channel)
         await interaction.response.send_message(f"✅ Gutschein `{code}` angewendet! (-{promos_db[code]['discount']}%)", ephemeral=True)
 
@@ -858,10 +1480,14 @@ class GenericCryptoTxidModal(discord.ui.Modal, title="Paste your Crypto TXID her
         self.owner_id = owner_id
         
     async def on_submit(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         txid = str(self.txid_input).strip()
         data["last_txid"] = txid
         data["status"] = "reviewing"
+        save_json(TICKETS_FILE, ticket_data)
         
         review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         if review_channel: 
@@ -880,7 +1506,10 @@ class LitecoinTxidModal(discord.ui.Modal, title="Paste your Litecoin TXID here")
         self.owner_id = owner_id
         
     async def on_submit(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         txid = str(self.txid_input).strip()
         
         if txid in used_txids_db: 
@@ -901,6 +1530,7 @@ class LitecoinTxidModal(discord.ui.Modal, title="Paste your Litecoin TXID here")
         
         data["last_txid"] = txid
         data["status"] = "reviewing"
+        save_json(TICKETS_FILE, ticket_data)
         
         emb = discord.Embed(title="🪙 Litecoin TXID Result", description=f"**Address Match:** {'Yes' if f_addr else 'No'}\n**Confirmations:** {conf}\n**Received:** {tot_ltc:.8f} LTC", color=COLOR_SUCCESS if f_addr and conf >= LTC_MIN_CONFIRMATIONS else COLOR_PENDING)
         await interaction.channel.send(embed=emb)
@@ -912,28 +1542,34 @@ class PaymentActionView(discord.ui.View):
         super().__init__(timeout=None)
         self.owner_id = owner_id
         
-    @discord.ui.button(label="Promo Code", style=discord.ButtonStyle.secondary, emoji="🎟️", custom_id="apply_promo_button")
+    @discord.ui.button(label="Promo Code", style=discord.ButtonStyle.secondary, emoji="🎟️")
     async def apply_promo(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_modal(PromoCodeModal(owner_id=self.owner_id))
         
-    @discord.ui.button(label="Payment Sent", style=discord.ButtonStyle.success, emoji="✅", custom_id="payment_sent_button")
+    @discord.ui.button(label="Payment Sent", style=discord.ButtonStyle.success, emoji="✅")
     async def payment_sent(self, interaction: discord.Interaction, button: discord.ui.Button):
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         data["status"] = "reviewing"
+        save_json(TICKETS_FILE, ticket_data)
+        
         buyer = interaction.guild.get_member(data["user_id"])
         review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
         
         if review_channel: 
-            await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> New payment to review.", embed=discord.Embed(title="🧾 Payment Review", description=f"Buyer: {buyer.mention}\nTicket: {interaction.channel.mention}", color=COLOR_WARN), view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=buyer.id))
+            embed = discord.Embed(title="🧾 Payment Review", description=f"Buyer: {buyer.mention}\nTicket: {interaction.channel.mention}", color=COLOR_WARN)
+            await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> New payment to review.", embed=embed, view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=buyer.id))
             
         await update_payment_summary_message(interaction.channel)
         await interaction.response.send_message("Staff notified.", ephemeral=True)
         
-    @discord.ui.button(label="Submit LTC TXID", style=discord.ButtonStyle.primary, emoji="🪙", custom_id="submit_txid_button")
+    @discord.ui.button(label="Submit LTC TXID", style=discord.ButtonStyle.primary, emoji="🪙")
     async def submit_txid(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_modal(LitecoinTxidModal(owner_id=self.owner_id))
         
-    @discord.ui.button(label="Submit Crypto TXID", style=discord.ButtonStyle.primary, emoji="🔗", custom_id="submit_generic_txid_button")
+    @discord.ui.button(label="Submit Crypto TXID", style=discord.ButtonStyle.primary, emoji="🔗")
     async def submit_generic_txid(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_modal(GenericCryptoTxidModal(owner_id=self.owner_id))
 
@@ -947,11 +1583,16 @@ class PaymentSelect(discord.ui.Select):
             discord.SelectOption(label="Paysafecard", value="paysafecard", emoji="💳"), 
             discord.SelectOption(label="Amazon Card", value="amazoncard", emoji="🎁")
         ]
-        super().__init__(placeholder="💳 Choose payment method", min_values=1, max_values=1, options=options, custom_id="buy_payment_select")
+        super().__init__(placeholder="💳 Choose payment method", min_values=1, max_values=1, options=options)
         
     async def callback(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         data["payment_key"] = self.values[0]
+        save_json(TICKETS_FILE, ticket_data)
+        
         buyer = interaction.guild.get_member(data["user_id"])
         ltc_price = await fetch_ltc_price_eur() if self.values[0] == "litecoin" else None
         
@@ -970,11 +1611,15 @@ class ProductSelect(discord.ui.Select):
             discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"), 
             discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️")
         ]
-        super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options, custom_id="buy_product_select")
+        super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options)
         
     async def callback(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
+        data = ticket_data.get(str(interaction.channel.id))
+        if not data:
+            return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
+            
         data["product_key"] = self.values[0]
+        save_json(TICKETS_FILE, ticket_data)
         
         embed = discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO)
         await interaction.response.send_message(embed=embed, view=PaymentSelectView())
@@ -990,11 +1635,11 @@ class BuySetupView(discord.ui.View):
         super().__init__(timeout=None)
         self.owner_id = owner_id
         
-    @discord.ui.button(label="Choose Product", style=discord.ButtonStyle.primary, emoji="📦", custom_id="choose_product_button")
+    @discord.ui.button(label="Choose Product", style=discord.ButtonStyle.primary, emoji="📦")
     async def choose_product(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_message("Select product:", view=ProductSelectView(), ephemeral=True)
         
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_buy_ticket_button")
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒")
     async def close_buy_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_message("Are you sure?", view=CloseConfirmView(), ephemeral=True)
 
@@ -1012,11 +1657,11 @@ class AdminPanelView(discord.ui.View):
         self.owner_id = owner_id
         self.ticket_channel_id = ticket_channel_id
         
-    @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️", custom_id="adminpanel_approve")
+    @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️")
     async def approve_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await ReviewView(self.ticket_channel_id, self.owner_id)._approve_logic(interaction)
         
-    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️", custom_id="adminpanel_deny")
+    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️")
     async def deny_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await ReviewView(self.ticket_channel_id, self.owner_id)._deny_logic(interaction)
 
@@ -1027,47 +1672,65 @@ class ReviewView(discord.ui.View):
         self.buyer_id = buyer_id
         
     async def _approve_logic(self, interaction: discord.Interaction):
-        channel = interaction.guild.get_channel(self.target_channel_id)
-        data = ticket_data.get(self.target_channel_id)
-        buyer = interaction.guild.get_member(self.buyer_id)
-        
-        invoice_id = build_invoice_id()
-        data["invoice_id"] = invoice_id
-        data["status"] = "approved"
-        
-        promo_code = data.get("applied_promo")
-        promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-        if promo_code and promo_code in promos_db: 
-            promos_db[promo_code]["uses"] -= 1
-            save_json(PROMOS_FILE, promos_db)
+        try:
+            channel = interaction.guild.get_channel(self.target_channel_id)
+            data = ticket_data.get(str(self.target_channel_id))
+            
+            if not data:
+                return await interaction.response.send_message("❌ Ticket-Daten nicht gefunden (evtl. Bot-Neustart?). Bitte manuell Key generieren.", ephemeral=True)
 
-        generated_key = generate_key(data["product_key"], ticket_id=self.target_channel_id)
-        keys_db[generated_key]["bound_user_id"] = str(buyer.id)
-        save_json(KEYS_FILE, keys_db)
-        
-        final_price = get_price(data["product_key"], buyer, promo_discount)
-        create_invoice_record(invoice_id, buyer.id, data["product_key"], data["payment_key"], generated_key, self.target_channel_id, final_price, is_reseller_dc(buyer))
-        
-        await channel.send(embed=discord.Embed(title="🧾 Payment Approved", description=f"**Invoice:** `{invoice_id}`\n**Price:** {final_price}€\n**Key:** `{generated_key}`", color=COLOR_SUCCESS))
-        await update_payment_summary_message(channel)
-        
-        if buyer: 
-            await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
-        await interaction.response.send_message("Approved.", ephemeral=True)
+            buyer = interaction.guild.get_member(self.buyer_id)
+            
+            invoice_id = build_invoice_id()
+            data["invoice_id"] = invoice_id
+            data["status"] = "approved"
+            save_json(TICKETS_FILE, ticket_data)
+            
+            promo_code = data.get("applied_promo")
+            promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
+            if promo_code and promo_code in promos_db: 
+                promos_db[promo_code]["uses"] -= 1
+                save_json(PROMOS_FILE, promos_db)
+
+            generated_key = generate_key(data["product_key"], ticket_id=str(self.target_channel_id))
+            keys_db[generated_key]["bound_user_id"] = str(buyer.id) if buyer else "Unknown"
+            save_json(KEYS_FILE, keys_db)
+            
+            final_price = get_price(data["product_key"], buyer, promo_discount)
+            create_invoice_record(invoice_id, self.buyer_id, data["product_key"], data["payment_key"], generated_key, self.target_channel_id, final_price, is_reseller_dc(buyer))
+            
+            if channel:
+                await channel.send(embed=discord.Embed(title="🧾 Payment Approved", description=f"**Invoice:** `{invoice_id}`\n**Price:** {final_price}€\n**Key:** `{generated_key}`", color=COLOR_SUCCESS))
+                await update_payment_summary_message(channel)
+            
+            if buyer: 
+                await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
+                
+            await interaction.response.send_message("✅ Approved. Key wurde generiert und ans Ticket gesendet.", ephemeral=True)
+            
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Ein Fehler ist aufgetreten: {str(e)}", ephemeral=True)
 
     async def _deny_logic(self, interaction: discord.Interaction):
-        channel = interaction.guild.get_channel(self.target_channel_id)
-        await channel.send(embed=discord.Embed(title="❌ Denied", description="Payment was denied.", color=COLOR_DENY))
-        if self.target_channel_id in ticket_data: 
-            ticket_data[self.target_channel_id]["status"] = "denied"
-        await update_payment_summary_message(channel)
-        await interaction.response.send_message("Denied.", ephemeral=True)
+        try:
+            channel = interaction.guild.get_channel(self.target_channel_id)
+            if str(self.target_channel_id) in ticket_data: 
+                ticket_data[str(self.target_channel_id)]["status"] = "denied"
+                save_json(TICKETS_FILE, ticket_data)
+                
+            if channel:
+                await channel.send(embed=discord.Embed(title="❌ Denied", description="Payment was denied.", color=COLOR_DENY))
+                await update_payment_summary_message(channel)
+                
+            await interaction.response.send_message("✅ Denied.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Fehler: {str(e)}", ephemeral=True)
 
-    @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️", custom_id="review_approve_button")
+    @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️")
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await self._approve_logic(interaction)
         
-    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️", custom_id="review_deny_button")
+    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️")
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await self._deny_logic(interaction)
 
@@ -1113,7 +1776,7 @@ class MainTicketPanelView(discord.ui.View):
         if ticket_type == "support":
             await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=discord.Embed(title="💠 Support Ticket", description="Please describe your issue.", color=COLOR_SUPPORT), view=TicketManageView(owner_id=user.id))
         else:
-            ticket_data[channel.id] = {
+            ticket_data[str(channel.id)] = {
                 "user_id": user.id, 
                 "product_key": None, 
                 "payment_key": None, 
@@ -1122,6 +1785,8 @@ class MainTicketPanelView(discord.ui.View):
                 "status": "waiting", 
                 "applied_promo": None
             }
+            save_json(TICKETS_FILE, ticket_data)
+            
             await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=discord.Embed(title="🛒 Buy Ticket", description="Click 'Choose Product' below.", color=COLOR_BUY), view=BuySetupView(owner_id=user.id))
             await send_summary_and_admin_panels(channel, user.id)
 
@@ -1295,7 +1960,7 @@ async def test_welcome(interaction: discord.Interaction):
 # =========================================================
 @bot.event
 async def on_ready():
-    global keys_db, redeemed_db, used_txids_db, used_paysafe_db, used_amazon_db, blacklist_db, invoices_db, promos_db, activity_db, webkeys_db, users_db
+    global keys_db, redeemed_db, used_txids_db, used_paysafe_db, used_amazon_db, blacklist_db, invoices_db, promos_db, activity_db, webkeys_db, users_db, ticket_data
     
     keys_db = load_json(KEYS_FILE, {})
     redeemed_db = load_json(REDEEMED_FILE, {})
@@ -1308,17 +1973,12 @@ async def on_ready():
     activity_db = load_json(ACTIVITY_FILE, [])
     webkeys_db = load_json(WEBKEYS_FILE, {})
     users_db = load_json(USERS_FILE, {})
+    ticket_data = load_json(TICKETS_FILE, {})
 
-    bot.loop.create_task(start_web_server())
-    
+    # Wir registrieren nur die permanenten Panels global.
     bot.add_view(MainTicketPanelView())
     bot.add_view(RedeemPanelView())
-    bot.add_view(TicketManageView(owner_id=0))
-    bot.add_view(BuySetupView(owner_id=0))
-    bot.add_view(PaymentActionView(owner_id=0))
     bot.add_view(PaymentSummaryView())
-    bot.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0))
-    bot.add_view(ReviewView(target_channel_id=0, buyer_id=0))
 
     try: 
         bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
