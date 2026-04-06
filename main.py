@@ -58,6 +58,9 @@ PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1477646233563566080/
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751701567934535/velo.png?ex=69d53236&is=69d3e0b6&hm=eeed157a58f5f3f309bb4de50df0c75e39fd90df368b4c09c666205a1611f4f9&=&format=webp&quality=lossless&width=652&height=652"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1477646233563566080/1490751958573645834/velo_log.png?ex=69d53273&is=69d3e0f3&hm=fe4fa4ac26ac8b32e1b67f540471804215ac6ed4767630e956057708b85cb89d&=&format=webp&quality=lossless&width=652&height=652"
 
+# 🔥 DER FIX FÜR DEN ABSTURZ: Diese Variable hat im letzten Code gefehlt!
+SAFE_WEBSITE_LOGO_URL = WEBSITE_LOGO_URL.replace("&", "&amp;")
+
 # Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
@@ -183,8 +186,6 @@ bot = ValeBot()
 # =========================================================
 # 🌍 WEB DASHBOARD HTML
 # =========================================================
-# ACHTUNG: Hier ist absichtlich KEIN 'f' vor dem String! 
-# Das verhindert, dass Python wegen Javascript-Klammern abstürzt.
 WEB_HTML = """
 <!DOCTYPE html>
 <html lang="de" class="dark">
@@ -547,7 +548,7 @@ WEB_HTML = """
 
         function showError(msg) { 
             const e = document.getElementById('auth-error'); 
-            e.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> ' + msg; 
+            e.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; 
             e.classList.remove('hidden'); 
         }
 
@@ -1819,7 +1820,7 @@ class MainTicketPanelView(discord.ui.View):
         await self.create_ticket_channel(interaction, "buy")
         
     async def create_ticket_channel(self, interaction: discord.Interaction, ticket_type: str):
-        # 🔥 NEU: Der Anti-Spam-Fix! Blockt doppelte Tickets ab. 🔥
+        # 🔥 ANTI-DOPPEL-TICKET SPERRE 🔥
         await interaction.response.defer(ephemeral=True)
         
         guild, user = interaction.guild, interaction.user
@@ -1828,13 +1829,13 @@ class MainTicketPanelView(discord.ui.View):
             return await interaction.followup.send("Du bist auf der Blacklist.", ephemeral=True)
             
         if user.id in ticket_locks:
-            return await interaction.followup.send("⏳ Bitte warten! Ticket wird bereits erstellt...", ephemeral=True)
+            return await interaction.followup.send("⏳ Dein Ticket wird gerade erstellt... Bitte nicht mehrmals klicken!", ephemeral=True)
             
         ticket_locks.add(user.id)
         try:
             existing = await find_existing_ticket(guild, user)
             if existing: 
-                return await interaction.followup.send(f"Ticket open: {existing.mention}", ephemeral=True)
+                return await interaction.followup.send(f"Du hast bereits ein offenes Ticket: {existing.mention}", ephemeral=True)
                 
             category = guild.get_channel(BUY_CATEGORY_ID if ticket_type == "buy" else SUPPORT_CATEGORY_ID)
             overwrites = {
@@ -1870,9 +1871,8 @@ class MainTicketPanelView(discord.ui.View):
                 await channel.send(content=f"{user.mention} <@&{STAFF_ROLE_ID}>", embed=discord.Embed(title="🛒 Buy Ticket", description="Click 'Choose Product' below.", color=COLOR_BUY), view=BuySetupView())
                 await send_summary_and_admin_panels(channel, user.id)
 
-            await interaction.followup.send(f"Ticket created: {channel.mention}", ephemeral=True)
+            await interaction.followup.send(f"✅ Ticket erfolgreich erstellt: {channel.mention}", ephemeral=True)
         finally:
-            # Ticket-Lock wird wieder entfernt, sobald der Channel da ist!
             ticket_locks.discard(user.id)
 
 
