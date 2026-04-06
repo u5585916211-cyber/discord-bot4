@@ -21,10 +21,10 @@ TOKEN = os.getenv("TOKEN")
 GUILD_ID_RAW = os.getenv("GUILD_ID")
 
 # --- NEU: EMAIL SMTP SETUP ---
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER") # Deine Gmail Adresse
-SMTP_PASS = os.getenv("SMTP_PASS") # Dein Gmail App-Passwort
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.firstmail.ltd")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
+SMTP_USER = os.getenv("SMTP_USER") # Deine Firstmail Adresse (in Railway eintragen)
+SMTP_PASS = os.getenv("SMTP_PASS") # Dein Firstmail Passwort (in Railway eintragen)
 
 if not TOKEN or not GUILD_ID_RAW: 
     raise ValueError("TOKEN oder GUILD_ID fehlt in den Railway Variablen.")
