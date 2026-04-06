@@ -89,9 +89,8 @@ WEBKEYS_FILE = "web_keys.json"
 USERS_FILE = "web_users.json"
 TICKETS_FILE = "tickets.json"
 SESSIONS_FILE = "sessions.json"
-PRODUCTS_FILE = "products.json" # NEU: Dynamische Produkte
 
-DEFAULT_PRODUCTS = {
+PRODUCTS = {
     "day_1": {"label": "1 Day", "price_eur": 5, "duration_days": 1, "key_prefix": "GEN-1D"},
     "week_1": {"label": "1 Week", "price_eur": 15, "duration_days": 7, "key_prefix": "GEN-1W"},
     "lifetime": {"label": "Lifetime", "price_eur": 30, "duration_days": 0, "key_prefix": "GEN-LT"}
@@ -131,7 +130,6 @@ activity_db = load_json(ACTIVITY_FILE, [])
 webkeys_db = load_json(WEBKEYS_FILE, {})
 users_db = load_json(USERS_FILE, {})
 web_sessions = load_json(SESSIONS_FILE, {})
-products_db = load_json(PRODUCTS_FILE, DEFAULT_PRODUCTS)
 
 def log_activity(action, user="System"):
     global activity_db
@@ -218,7 +216,7 @@ WEB_HTML = """
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
 
-    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] z-[999] flex flex-col items-center justify-center hidden-view">
+    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] bg-opacity-90 z-[999] flex flex-col items-center justify-center hidden-view backdrop-blur-md">
         <i class="fa-solid fa-satellite-dish animate-pulse text-purple-500 text-6xl mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]"></i>
         <h2 class="text-3xl font-black text-white tracking-widest glow-text">RECONNECTING</h2>
         <p class="text-gray-400 mt-3 font-bold">Verbindung zum Server wird wiederhergestellt...</p>
@@ -368,8 +366,17 @@ WEB_HTML = """
                 <div id="gen" class="tab-content">
                     <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 max-w-2xl shadow-[0_0_20px_rgba(168,85,247,0.3)]">
                         <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access Keys (Admin)</h2>
-                        <div class="space-y-4" id="admin-gen-buttons">
-                            </div>
+                        <div class="space-y-4">
+                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                                <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                            </button>
+                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                                <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                            </button>
+                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
+                                <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -425,10 +432,17 @@ WEB_HTML = """
                             <button onclick="createPromo()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded-lg transition shadow-[0_0_15px_rgba(236,72,153,0.5)]">Create Code</button>
                         </div>
                         <div class="md:col-span-2 glass rounded-2xl overflow-hidden">
-                            <div class="p-6 border-b border-purple-500/30"><h3 class="text-lg font-bold text-white">Active Promos</h3></div>
+                            <div class="p-6 border-b border-purple-500/30">
+                                <h3 class="text-lg font-bold text-white">Active Promos</h3>
+                            </div>
                             <table class="w-full text-left text-sm">
                                 <thead class="text-purple-300 border-b border-purple-500/30 bg-black/60">
-                                    <tr><th class="p-4">Code</th><th class="p-4">Discount</th><th class="p-4">Uses Left</th><th class="p-4 text-right">Action</th></tr>
+                                    <tr>
+                                        <th class="p-4">Code</th>
+                                        <th class="p-4">Discount</th>
+                                        <th class="p-4">Uses Left</th>
+                                        <th class="p-4 text-right">Action</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="table-promos" class="divide-y divide-purple-500/20"></tbody>
                             </table>
@@ -439,19 +453,35 @@ WEB_HTML = """
                 <div id="lookup" class="tab-content">
                     <div class="glass p-6 rounded-2xl mb-6 flex gap-4 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                         <input type="text" id="lookup-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition">
-                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]"><i class="fa-solid fa-search mr-2"></i>Search</button>
+                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]">
+                            <i class="fa-solid fa-search mr-2"></i>Search
+                        </button>
                     </div>
                     <div id="lookup-result" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500"><p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500"><p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500"><p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Spent</p>
+                                <h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3>
+                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
+                                <p class="text-gray-400 text-sm font-bold">Total Orders</p>
+                                <h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
+                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500">
+                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p>
+                                <h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3>
+                            </div>
                         </div>
                         <div class="glass rounded-2xl overflow-hidden">
                             <div class="p-4 border-b border-purple-500/30 font-bold bg-black/60 text-white">Purchase History</div>
                             <table class="w-full text-left text-sm">
                                 <thead class="text-purple-300 border-b border-purple-500/30">
-                                    <tr><th class="p-4">Invoice</th><th class="p-4">Product</th><th class="p-4">Price</th><th class="p-4">Date</th></tr>
+                                    <tr>
+                                        <th class="p-4">Invoice</th>
+                                        <th class="p-4">Product</th>
+                                        <th class="p-4">Price</th>
+                                        <th class="p-4">Date</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
                             </table>
@@ -465,20 +495,26 @@ WEB_HTML = """
                         <input type="text" id="ann-title" placeholder="Title (e.g. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white font-bold outline-none focus:border-blue-400 transition">
                         <textarea id="ann-desc" placeholder="Message content..." rows="6" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white resize-none outline-none focus:border-blue-400 transition"></textarea>
                         <input type="text" id="ann-img" placeholder="Image URL (Optional)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-6 text-white text-sm outline-none focus:border-blue-400 transition">
-                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.5)]"><i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord</button>
+                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.5)]">
+                            <i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord
+                        </button>
                     </div>
                 </div>
 
                 <div id="blacklist" class="tab-content">
                     <div class="glass p-6 rounded-2xl mb-6 border-l-4 border-red-500 flex gap-4 items-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 text-white outline-none focus:border-red-400 transition">
-                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 text-white outline-none focus:border-red-400 transition">
-                        <button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 text-white px-8 py-3 font-bold rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.5)]">Ban</button>
+                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 text-white outline-none focus:border-red-400 transition">
+                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 text-white outline-none focus:border-red-400 transition">
+                        <button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 font-bold rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.5)]">Ban</button>
                     </div>
                     <div class="glass rounded-2xl overflow-hidden">
                         <table class="w-full text-left text-sm">
                             <thead class="text-red-300 border-b border-red-500/30 bg-black/60">
-                                <tr><th class="p-4">User ID</th><th class="p-4">Reason</th><th class="p-4 text-right">Action</th></tr>
+                                <tr>
+                                    <th class="p-4">User ID</th>
+                                    <th class="p-4">Reason</th>
+                                    <th class="p-4 text-right">Action</th>
+                                </tr>
                             </thead>
                             <tbody id="table-blacklist" class="divide-y divide-purple-500/20"></tbody>
                         </table>
@@ -508,8 +544,17 @@ WEB_HTML = """
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
                     <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access</h2>
-                    <div class="space-y-4" id="reseller-gen-buttons">
-                        </div>
+                    <div class="space-y-4">
+                        <button onclick="genKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                            <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                        </button>
+                        <button onclick="genKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                            <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                        </button>
+                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
+                            <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="glass p-6 rounded-2xl shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                     <h2 class="text-xl font-bold mb-4 text-white">Your Stock</h2>
@@ -559,6 +604,7 @@ WEB_HTML = """
                 return res;
             } catch (e) {
                 if (endpoint !== '/api/verify') {
+                    // Zeige das Overlay an, anstatt alles zu löschen
                     document.getElementById('reconnect-overlay').classList.remove('hidden-view');
                     setTimeout(checkAuthOnLoad, 2500);
                 }
@@ -631,9 +677,6 @@ WEB_HTML = """
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
             if (t) {
-                document.getElementById('view-auth').classList.add('hidden-view');
-                document.getElementById('reconnect-overlay').classList.remove('hidden-view');
-                
                 try {
                     const res = await fetch('/api/verify', {
                         method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})
@@ -644,8 +687,18 @@ WEB_HTML = """
                         const d = await res.json(); 
                         initApp(d.role, d.user); 
                     } else if (res.status === 401) { logout(); } 
-                    else { setTimeout(checkAuthOnLoad, 3000); }
-                } catch(e) { setTimeout(checkAuthOnLoad, 3000); }
+                    else { 
+                        document.getElementById('reconnect-overlay').classList.remove('hidden-view');
+                        setTimeout(checkAuthOnLoad, 3000); 
+                    }
+                } catch(e) { 
+                    document.getElementById('reconnect-overlay').classList.remove('hidden-view');
+                    setTimeout(checkAuthOnLoad, 3000); 
+                }
+            } else {
+                // Wenn kein Token da ist, zeige den Login Screen (Fix für den Black Screen beim ersten Laden)
+                document.getElementById('view-auth').classList.remove('hidden-view');
+                document.getElementById('reconnect-overlay').classList.add('hidden-view');
             }
         }
 
@@ -655,14 +708,12 @@ WEB_HTML = """
             if (role === 'admin') { 
                 document.getElementById('view-admin').classList.remove('hidden-view'); 
                 document.getElementById('admin-name').innerText = name; 
-                loadProductsForAdmin();
                 nav('dash'); 
                 loadDiscordStats();
                 setInterval(loadDiscordStats, 10000);
             } else if (role === 'reseller') { 
                 document.getElementById('view-reseller').classList.remove('hidden-view'); 
                 document.getElementById('r-name').innerText = name; 
-                loadProductsForReseller();
                 loadResellerKeys(); 
             } else if (role === 'customer') {
                 document.getElementById('view-customer').classList.remove('hidden-view'); 
@@ -699,32 +750,6 @@ WEB_HTML = """
                 const data = await res.json();
                 document.getElementById('dc-members').innerText = data.members;
                 document.getElementById('dc-tickets').innerText = data.open_tickets;
-            } catch(e){}
-        }
-
-        async function loadProductsForAdmin() {
-            try {
-                const res = await apiCall('/api/products', {});
-                const data = await res.json();
-                const container = document.getElementById('admin-gen-buttons');
-                container.innerHTML = Object.entries(data).map(([pid, p]) => `
-                    <button onclick="genAdminKey('${pid}')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                        <span class="font-bold">${p.label} Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                    </button>
-                `).join('');
-            } catch(e){}
-        }
-        
-        async function loadProductsForReseller() {
-            try {
-                const res = await apiCall('/api/products', {});
-                const data = await res.json();
-                const container = document.getElementById('reseller-gen-buttons');
-                container.innerHTML = Object.entries(data).map(([pid, p]) => `
-                    <button onclick="genKey('${pid}')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                        <span class="font-bold">${p.label} Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                    </button>
-                `).join('');
             } catch(e){}
         }
 
@@ -983,7 +1008,10 @@ async def api_customer_data(request):
         
     key = user_info["user"]
     kdata = keys_db.get(key, {})
-    prod = products_db.get(kdata.get("type"), {})
+    
+    # Sicherstellen, dass das Produkt existiert (Fallback für alte Keys)
+    ptype = kdata.get("type", "day_1")
+    prod = PRODUCTS.get(ptype, {"label": "Unknown"})
     
     status = "Active"
     if kdata.get("revoked"): status = "Banned"
@@ -1071,9 +1099,6 @@ async def api_team_delete(request):
         save_json(USERS_FILE, users_db)
         log_activity(f"Deleted Reseller {uname}", user_info["user"])
     return web.json_response({"ok": True})
-
-async def api_products(request):
-    return web.json_response(products_db)
 
 async def api_activity(request):
     user_info = get_user_from_token(request)
@@ -1166,7 +1191,7 @@ async def api_lookup(request):
             spent += float(data.get("final_price_eur", 0))
             invs.append({
                 "id": inv_id, 
-                "product": products_db.get(data["product_type"], {}).get("label", "Unknown"), 
+                "product": PRODUCTS.get(data["product_type"], {}).get("label", "Unknown"), 
                 "price": data.get("final_price_eur", 0), 
                 "date": data["created_at"]
             })
@@ -1241,7 +1266,7 @@ async def api_reseller_data(request):
         
     my_keys = [{
         "key": k, 
-        "type": products_db.get(v["type"], {}).get("label", "Unknown")
+        "type": PRODUCTS.get(v["type"], {}).get("label", "Unknown")
     } for k, v in keys_db.items() if v.get("created_by") == user_info["user"]]
     
     return web.json_response({"my_keys": my_keys})
@@ -1252,7 +1277,7 @@ async def api_reseller_gen(request):
         return web.Response(status=401)
         
     ptype = (await request.json()).get("t", "day_1")
-    prefix = products_db[ptype]["key_prefix"]
+    prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     
     keys_db[new_key] = {
@@ -1275,7 +1300,7 @@ async def api_admin_gen(request):
         return web.Response(status=401)
         
     ptype = (await request.json()).get("t", "day_1")
-    prefix = products_db[ptype]["key_prefix"]
+    prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     
     keys_db[new_key] = {
@@ -1310,7 +1335,6 @@ async def start_web_server():
     app.router.add_post('/api/team', api_team)
     app.router.add_post('/api/team/delete', api_team_delete)
     
-    app.router.add_post('/api/products', api_products)
     app.router.add_post('/api/promos', api_promos)
     app.router.add_post('/api/promos/add', api_add_promo)
     app.router.add_post('/api/promos/remove', api_rm_promo)
@@ -1351,7 +1375,7 @@ def is_reseller_dc(member: discord.Member | None) -> bool:
     return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
 
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
-    base_price = products_db[product_key]["price_eur"]
+    base_price = PRODUCTS[product_key]["price_eur"]
     if is_reseller_dc(member): 
         base_price = round(base_price * 0.5, 2)
     if promo_discount > 0: 
@@ -1365,7 +1389,7 @@ async def dm_user_safe(user: discord.abc.User, content: str = None, embed: disco
         pass
 
 def generate_key(product_type: str, ticket_id: str | None = None, creator="System") -> str:
-    prefix = products_db[product_type]["key_prefix"]
+    prefix = PRODUCTS[product_type]["key_prefix"]
     while True:
         key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
         if key not in keys_db:
@@ -1438,7 +1462,7 @@ async def find_existing_ticket(guild: discord.Guild, user: discord.Member):
 
 # --- EMBEDS ---
 def build_order_summary(product_key: str, payment_key: str, user: discord.Member, ltc_price_eur: float | None = None) -> discord.Embed:
-    product = products_db[product_key]
+    product = PRODUCTS[product_key]
     payment = PAYMENTS[payment_key]
     price = get_price(product_key, user)
     price_header = f"💶 **Price:** {format_price(price)}€"
@@ -1476,7 +1500,7 @@ def build_payment_summary_embed(channel_id: int) -> discord.Embed:
     promo_code = data.get("applied_promo")
     
     promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-    if product_key in products_db:
+    if product_key in PRODUCTS:
         price_text = f"{format_price(get_price(product_key, user, promo_discount))}€"
         if is_reseller_dc(user): 
             price_text += " (Reseller)"
@@ -1488,7 +1512,7 @@ def build_payment_summary_embed(channel_id: int) -> discord.Embed:
     status_map = {"waiting": "🟡 Waiting", "reviewing": "🟠 Reviewing", "approved": "✅ Approved", "denied": "❌ Denied"}
     
     embed = discord.Embed(title="📋 Payment Summary", description=f"{premium_divider()}\n**Live order status**\n{premium_divider()}", color=COLOR_INFO)
-    embed.add_field(name="Product", value=products_db[product_key]["label"] if product_key in products_db else "Not selected", inline=True)
+    embed.add_field(name="Product", value=PRODUCTS[product_key]["label"] if product_key in PRODUCTS else "Not selected", inline=True)
     embed.add_field(name="Price", value=price_text, inline=True)
     embed.add_field(name="Method", value=PAYMENTS[data.get("payment_key")]["label"] if data.get("payment_key") in PAYMENTS else "Not selected", inline=True)
     embed.add_field(name="Status", value=status_map.get(data.get("status", "waiting"), data.get("status", "waiting")), inline=True)
@@ -1539,15 +1563,13 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     keys_db[key].update({"used": True, "used_by": str(member.id)})
     save_json(KEYS_FILE, keys_db)
     
-    dur_days = products_db[pt].get("duration_days", 0)
-    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + timedelta(days=dur_days)).isoformat() if dur_days > 0 else None}
+    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + PRODUCTS[pt]["duration"]).isoformat() if PRODUCTS[pt]["duration"] else None}
     save_json(REDEEMED_FILE, redeemed_db)
     
     await member.add_roles(r)
     return True, pt
 
 # --- VIEWS & MODALS ---
-
 class CloseConfirmView(discord.ui.View):
     def __init__(self): 
         super().__init__(timeout=60)
@@ -1732,17 +1754,14 @@ class PaymentSelectView(discord.ui.View):
 
 class ProductSelect(discord.ui.Select):
     def __init__(self):
-        options = []
-        for k, v in products_db.items():
-            options.append(discord.SelectOption(label=v["label"], description=f"{v['price_eur']}€", value=k, emoji="📦"))
-        if not options:
-            options.append(discord.SelectOption(label="Keine Produkte verfügbar", value="none"))
+        options = [
+            discord.SelectOption(label="1 Day", description="5€", value="day_1", emoji="📅"), 
+            discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"), 
+            discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️")
+        ]
         super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options, custom_id="buy_product_select")
         
     async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "none":
-            return await interaction.response.send_message("Keine Produkte im System.", ephemeral=True)
-            
         data = ticket_data.get(str(interaction.channel.id))
         if not data:
             return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
@@ -1750,7 +1769,7 @@ class ProductSelect(discord.ui.Select):
         data["product_key"] = self.values[0]
         save_json(TICKETS_FILE, ticket_data)
         
-        embed = discord.Embed(title="📦 Product Selected", description=f"**{products_db[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO)
+        embed = discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO)
         await interaction.response.send_message(embed=embed, view=PaymentSelectView())
         await update_payment_summary_message(interaction.channel)
 
@@ -1835,7 +1854,6 @@ async def process_deny(interaction: discord.Interaction, target_channel_id: int)
         await interaction.response.send_message("✅ Denied.", ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(f"❌ Fehler: {str(e)}", ephemeral=True)
-
 
 class AdminPanelView(discord.ui.View):
     def __init__(self, owner_id=None, ticket_channel_id=None): 
@@ -1943,7 +1961,6 @@ class MainTicketPanelView(discord.ui.View):
 
         await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
-
 class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
     key_input = discord.ui.TextInput(label="Key", required=True)
     
@@ -1951,7 +1968,7 @@ class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
         await interaction.response.defer(ephemeral=True)
         ok, res = await redeem_key_for_user(interaction.guild, interaction.user, str(self.key_input).strip().upper())
         if ok: 
-            await interaction.followup.send(f"✅ Success! You received the {products_db[res]['label']} role.", ephemeral=True)
+            await interaction.followup.send(f"✅ Success! You received the {PRODUCTS[res]['label']} role.", ephemeral=True)
         else: 
             await interaction.followup.send(f"❌ {res}", ephemeral=True)
 
@@ -2015,7 +2032,6 @@ async def gen_admin_key(interaction: discord.Interaction):
         
     await interaction.response.send_message(f"Admin Invite Key generiert: `{new_key}`", ephemeral=True)
 
-
 @bot.tree.command(name="gen_reseller_key", description="Generiert einen RESELLER-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_reseller_key(interaction: discord.Interaction, user: discord.Member):
@@ -2042,7 +2058,6 @@ async def gen_reseller_key(interaction: discord.Interaction, user: discord.Membe
         
     await interaction.response.send_message(f"Reseller Invite Key generiert: `{new_key}`", ephemeral=True)
 
-
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def ticket(interaction: discord.Interaction):
@@ -2054,13 +2069,11 @@ async def ticket(interaction: discord.Interaction):
     embed.set_image(url=PANEL_IMAGE_URL)
     await interaction.response.send_message(embed=embed, view=MainTicketPanelView())
 
-
 @bot.tree.command(name="send_redeem_panel", description="Send the redeem panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_redeem_panel(interaction: discord.Interaction):
     embed = discord.Embed(title="🎟️ VALE GEN REDEEM CENTER", description="Click to redeem your key.", color=COLOR_MAIN)
     await interaction.response.send_message(embed=embed, view=RedeemPanelView())
-
 
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du?", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
@@ -2080,7 +2093,6 @@ async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[in
         await ch.send(embed=embed)
     await interaction.response.send_message("✅ Danke für deine Bewertung!", ephemeral=True)
 
-
 @bot.tree.command(name="send_rules", description="Postet das Regelwerk")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_rules(interaction: discord.Interaction):
@@ -2095,7 +2107,6 @@ async def send_rules(interaction: discord.Interaction):
     embed.set_image(url=WELCOME_BANNER_URL)
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("Regelwerk gepostet!", ephemeral=True)
-
 
 @bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
