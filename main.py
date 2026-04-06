@@ -45,7 +45,7 @@ RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
 # ⚠️ TRAGE HIER DEN DISCORD-BILD-LINK VON DEINEM LILA LOGO EIN FÜR DIE WEBSITE!
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548"
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
@@ -495,38 +495,32 @@ async def api_stats(request):
     active_k = sum(1 for k, v in keys_db.items() if not v["used"])
     return web.json_response({"total_revenue": total_rev, "buyers_today": len(today_buyers), "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())})
 
-async def api_activity(request):
+async def api_activity(request): 
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(activity_db)
+    return web.json_response(activity_db) 
 
-async def api_keys(request):
+async def api_keys(request): 
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(keys_db)
+    return web.json_response(keys_db) 
 
-async def api_promos(request):
+async def api_promos(request): 
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(promos_db)
+    return web.json_response(promos_db) 
 
 async def api_add_promo(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}
-    save_json(PROMOS_FILE, promos_db)
-    log_activity(f"Created Promo {d['code']}", u["user"])
-    return web.json_response({"ok": True})
+    d = await request.json(); promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}; save_json(PROMOS_FILE, promos_db)
+    log_activity(f"Created Promo {d['code']}", u["user"]); return web.json_response({"ok": True})
 
 async def api_rm_promo(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    c = d["code"]
-    if c in promos_db:
-        del promos_db[c]
-        save_json(PROMOS_FILE, promos_db)
+    d = await request.json(); c = d["code"] 
+    if c in promos_db: del promos_db[c]; save_json(PROMOS_FILE, promos_db)
     return web.json_response({"ok": True})
 
 async def api_lookup(request):
@@ -536,92 +530,67 @@ async def api_lookup(request):
     for i_id, data in invoices_db.items():
         if data["buyer_id"] == target:
             spent += float(data.get("final_price_eur", 0))
-            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label","Unk"), "price": data.get("final_price_eur",0), "date": data["created_at"]})
+            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label", "Unk"), "price": data.get("final_price_eur", 0), "date": data["created_at"]})
     return web.json_response({"total_spent": spent, "total_orders": len(invs), "is_banned": target in blacklist_db, "invoices": invs[::-1]})
 
 async def api_announce(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    d = await request.json(); ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
     if ch:
         emb = discord.Embed(title=d["title"], description=d["desc"], color=COLOR_MAIN)
         if d.get("img"): emb.set_image(url=d["img"])
-        await ch.send(embed=emb)
-        log_activity("Sent Discord Broadcast", u["user"])
+        await ch.send(embed=emb); log_activity("Sent Discord Broadcast", u["user"])
     return web.json_response({"ok": True})
 
-async def api_blacklist(request):
+async def api_blacklist(request): 
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(blacklist_db)
+    return web.json_response(blacklist_db) 
 
 async def api_add_blacklist(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json()
-    uid = d.get("user_id")
-    rsn = d.get("reason", "Web Ban")
-    if uid:
-        blacklist_db[uid] = {"reason": rsn, "added_by": u["user"], "added_at": iso_now()}
-        save_json(BLACKLIST_FILE, blacklist_db)
-        log_activity(f"Banned {uid}", u["user"])
+    d = await request.json(); uid = d.get("user_id"); rsn = d.get("reason", "Web Ban")
+    if uid: blacklist_db[uid] = {"reason": rsn, "added_by": u["user"], "added_at": iso_now()}; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Banned {uid}", u["user"])
     return web.json_response({"ok": True})
 
 async def api_rm_blacklist(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "admin": return web.Response(status=401)
     uid = (await request.json()).get("user_id")
-    if uid in blacklist_db:
-        del blacklist_db[uid]
-        save_json(BLACKLIST_FILE, blacklist_db)
-        log_activity(f"Unbanned {uid}", u["user"])
+    if uid in blacklist_db: del blacklist_db[uid]; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Unbanned {uid}", u["user"])
     return web.json_response({"ok": True})
 
 async def api_reseller_data(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "reseller": return web.Response(status=401)
-    my_keys = [{"key": k, "type": PRODUCTS.get(v["type"],{}).get("label","Unk")} for k, v in keys_db.items() if v.get("created_by") == u["user"]]
+    my_keys = [{"key": k, "type": PRODUCTS.get(v["type"], {}).get("label", "Unk")} for k, v in keys_db.items() if v.get("created_by") == u["user"]]
     return web.json_response({"my_keys": my_keys})
 
 async def api_reseller_gen(request):
     u = get_user_from_token(request)
     if not u or u["role"] != "reseller": return web.Response(status=401)
-    ptype = (await request.json()).get("t", "day_1")
-    prefix = PRODUCTS[ptype]["key_prefix"]
+    ptype = (await request.json()).get("t", "day_1"); prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     keys_db[new_key] = {"type": ptype, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "created_by": u["user"]}
-    save_json(KEYS_FILE, keys_db)
-    log_activity(f"Created {ptype} Key", u["user"])
+    save_json(KEYS_FILE, keys_db); log_activity(f"Created {ptype} Key", u["user"])
     return web.json_response({"key": new_key})
 
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_index)
-    app.router.add_post('/api/login', api_login)
-    app.router.add_post('/api/register', api_register)
-    app.router.add_post('/api/verify', api_verify)
+    app.router.add_post('/api/login', api_login); app.router.add_post('/api/register', api_register); app.router.add_post('/api/verify', api_verify)
     
-    app.router.add_post('/api/stats', api_stats)
-    app.router.add_post('/api/activity', api_activity)
-    app.router.add_post('/api/keys', api_keys)
-    app.router.add_post('/api/promos', api_promos)
-    app.router.add_post('/api/promos/add', api_add_promo)
-    app.router.add_post('/api/promos/remove', api_rm_promo)
-    app.router.add_post('/api/lookup', api_lookup)
-    app.router.add_post('/api/announce', api_announce)
-    app.router.add_post('/api/blacklist', api_blacklist)
-    app.router.add_post('/api/blacklist/add', api_add_blacklist)
-    app.router.add_post('/api/blacklist/remove', api_rm_blacklist)
+    app.router.add_post('/api/stats', api_stats); app.router.add_post('/api/activity', api_activity); app.router.add_post('/api/keys', api_keys)
+    app.router.add_post('/api/promos', api_promos); app.router.add_post('/api/promos/add', api_add_promo); app.router.add_post('/api/promos/remove', api_rm_promo)
+    app.router.add_post('/api/lookup', api_lookup); app.router.add_post('/api/announce', api_announce)
+    app.router.add_post('/api/blacklist', api_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist); app.router.add_post('/api/blacklist/remove', api_rm_blacklist)
     
-    app.router.add_post('/api/reseller/data', api_reseller_data)
-    app.router.add_post('/api/reseller/generate', api_reseller_gen)
+    app.router.add_post('/api/reseller/data', api_reseller_data); app.router.add_post('/api/reseller/generate', api_reseller_gen)
     
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
+    runner = web.AppRunner(app); await runner.setup()
+    port = int(os.environ.get("PORT", 8080)); site = web.TCPSite(runner, '0.0.0.0', port); await site.start()
 
 # =========================================================
 # BOT COMMANDS & TICKET LOGIC
@@ -647,26 +616,20 @@ def generate_key(product_type: str, ticket_id: int | None = None, creator="Syste
         key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
         if key not in keys_db:
             keys_db[key] = {"type": product_type, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "redeemed_at": None, "approved_in_ticket": ticket_id, "created_by": creator}
-            save_json(KEYS_FILE, keys_db)
-            log_activity("Generierte einen Key", creator)
-            return key
+            save_json(KEYS_FILE, keys_db); log_activity("Generierte einen Key", creator); return key
 
 def create_invoice_record(invoice_id, buyer_id, product_type, payment_key, key, ticket_id, final_price_eur, reseller_discount):
     invoices_db[invoice_id] = {"buyer_id": str(buyer_id), "product_type": product_type, "payment_key": payment_key, "key": key, "ticket_id": str(ticket_id), "created_at": iso_now(), "final_price_eur": final_price_eur, "reseller_discount": reseller_discount}
-    save_json(INVOICES_FILE, invoices_db)
-    log_activity(f"Neue Order ({final_price_eur}€)", buyer_id)
+    save_json(INVOICES_FILE, invoices_db); log_activity(f"Neue Order ({final_price_eur}€)", buyer_id)
 
 def extract_possible_paysafe_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
 def extract_possible_amazon_codes(text: str): return re.findall(r"\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8}){1,5}\b", text.upper())
 def litoshi_to_ltc(value: int) -> float: return value / 100_000_000
 
 def tx_matches_our_address(tx_data: dict, expected_address: str) -> tuple[bool, int]:
-    total_received = 0
-    found = False
+    total_received = 0; found = False
     for output in tx_data.get("outputs", []):
-        if expected_address in output.get("addresses", []): 
-            found = True
-            total_received += int(output.get("value", 0))
+        if expected_address in output.get("addresses", []): found = True; total_received += int(output.get("value", 0))
     return found, total_received
 
 async def fetch_ltc_tx(txid: str):
@@ -688,75 +651,48 @@ async def find_existing_ticket(guild: discord.Guild, user: discord.Member):
 
 # --- EMBEDS ---
 def build_order_summary(product_key: str, payment_key: str, user: discord.Member, ltc_price_eur: float | None = None) -> discord.Embed:
-    product = PRODUCTS[product_key]
-    payment = PAYMENTS[payment_key]
-    price = get_price(product_key, user)
+    product = PRODUCTS[product_key]; payment = PAYMENTS[payment_key]; price = get_price(product_key, user)
     price_header = f"💶 **Price:** {format_price(price)}€"
-    
-    if is_reseller_dc(user): 
-        price_header += " (**Reseller 50% OFF**)"
-        
-    if payment_key == "paypal": 
-        extra = f"## 💸 PayPal Payment\n**Send payment to:**\n`{PAYPAL_EMAIL}`\n\n**After payment:**\n• Send screenshot / proof in this ticket\n• Click **Payment Sent**"
+    if is_reseller_dc(user): price_header += " (**Reseller 50% OFF**)"
+    if payment_key == "paypal": extra = f"## 💸 PayPal Payment\n**Send payment to:**\n`{PAYPAL_EMAIL}`\n\n**After payment:**\n• Send screenshot / proof in this ticket\n• Click **Payment Sent**"
     elif payment_key == "litecoin":
         extra = f"## 🪙 Litecoin Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{LITECOIN_ADDRESS}`\n\n"
-        if ltc_price_eur and ltc_price_eur > 0: 
-            extra += f"**Approx LTC amount:** `{price / ltc_price_eur:.6f} LTC`\n**Market rate:** `{ltc_price_eur:.2f} EUR/LTC`\n\n"
+        if ltc_price_eur and ltc_price_eur > 0: extra += f"**Approx LTC amount:** `{price / ltc_price_eur:.6f} LTC`\n**Market rate:** `{ltc_price_eur:.2f} EUR/LTC`\n\n"
         extra += "**After payment:**\n• Click **Submit TXID**\n• Paste your TXID in the popup\n• Bot checks it automatically"
-    elif payment_key == "ethereum": 
-        extra = f"## 🔷 Ethereum Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{ETHEREUM_ADDRESS}`\n\n**After payment:**\n• Click **Submit Crypto TXID**"
-    elif payment_key == "solana": 
-        extra = f"## 🟣 Solana Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{SOLANA_ADDRESS}`\n\n**After payment:**\n• Click **Submit Crypto TXID**"
-    elif payment_key == "paysafecard": 
-        extra = f"## 💳 Paysafecard Payment\n**Main price:** `{format_price(price)}€`\n\n**After buying your code:**\n• Click **Submit Paysafecard Code**"
-    else: 
-        extra = f"## 🎁 Amazon Card Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{LITECOIN_ADDRESS}`\n\n**After buying your Amazon card:**\n• Click **Submit Amazon Code**"
-        
+    elif payment_key == "ethereum": extra = f"## 🔷 Ethereum Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{ETHEREUM_ADDRESS}`\n\n**After payment:**\n• Click **Submit Crypto TXID**"
+    elif payment_key == "solana": extra = f"## 🟣 Solana Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{SOLANA_ADDRESS}`\n\n**After payment:**\n• Click **Submit Crypto TXID**"
+    elif payment_key == "paysafecard": extra = f"## 💳 Paysafecard Payment\n**Main price:** `{format_price(price)}€`\n\n**After buying your code:**\n• Click **Submit Paysafecard Code**"
+    else: extra = f"## 🎁 Amazon Card Payment\n**Main price:** `{format_price(price)}€`\n**Send to address:**\n`{LITECOIN_ADDRESS}`\n\n**After buying your Amazon card:**\n• Click **Submit Amazon Code**"
     return discord.Embed(title="✦ ORDER SETUP COMPLETE ✦", description=f"{premium_divider()}\n{user.mention}\n\n📦 **Product:** {product['label']}\n{price_header}\n{payment['emoji']} **Method:** {payment['label']}\n\n{extra}\n{premium_divider()}", color=COLOR_MAIN)
 
 def build_payment_summary_embed(channel_id: int) -> discord.Embed:
-    data = ticket_data.get(channel_id, {})
-    user = bot.get_guild(GUILD_ID).get_member(data.get("user_id")) if bot.get_guild(GUILD_ID) and data.get("user_id") else None
-    product_key = data.get("product_key")
-    promo_code = data.get("applied_promo")
-    
+    data = ticket_data.get(channel_id, {}); user = bot.get_guild(GUILD_ID).get_member(data.get("user_id")) if bot.get_guild(GUILD_ID) and data.get("user_id") else None
+    product_key = data.get("product_key"); promo_code = data.get("applied_promo")
     promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
     if product_key in PRODUCTS:
         price_text = f"{format_price(get_price(product_key, user, promo_discount))}€"
         if is_reseller_dc(user): price_text += " (Reseller)"
         if promo_discount > 0: price_text += f" (Promo -{promo_discount}%)"
-    else: 
-        price_text = "—"
-        
+    else: price_text = "—"
     status_map = {"waiting": "🟡 Waiting", "reviewing": "🟠 Reviewing", "approved": "✅ Approved", "denied": "❌ Denied"}
     embed = discord.Embed(title="📋 Payment Summary", description=f"{premium_divider()}\n**Live order status**\n{premium_divider()}", color=COLOR_INFO)
-    embed.add_field(name="Product", value=PRODUCTS[product_key]["label"] if product_key in PRODUCTS else "Not selected", inline=True)
-    embed.add_field(name="Price", value=price_text, inline=True)
-    embed.add_field(name="Method", value=PAYMENTS[data.get("payment_key")]["label"] if data.get("payment_key") in PAYMENTS else "Not selected", inline=True)
-    embed.add_field(name="Status", value=status_map.get(data.get("status", "waiting"), data.get("status", "waiting")), inline=True)
-    embed.add_field(name="TXID", value=f"`{short_txid(data.get('last_txid'))}`" if data.get('last_txid') else "Not submitted", inline=True)
+    embed.add_field(name="Product", value=PRODUCTS[product_key]["label"] if product_key in PRODUCTS else "Not selected", inline=True); embed.add_field(name="Price", value=price_text, inline=True); embed.add_field(name="Method", value=PAYMENTS[data.get("payment_key")]["label"] if data.get("payment_key") in PAYMENTS else "Not selected", inline=True)
+    embed.add_field(name="Status", value=status_map.get(data.get("status", "waiting"), data.get("status", "waiting")), inline=True); embed.add_field(name="TXID", value=f"`{short_txid(data.get('last_txid'))}`" if data.get('last_txid') else "Not submitted", inline=True)
     embed.add_field(name="Invoice", value=f"`{data.get('invoice_id')}`" if data.get('invoice_id') else "Not created", inline=False)
-    
-    if promo_code: 
-        embed.add_field(name="Gutschein", value=f"`{promo_code}`", inline=True)
-        
+    if promo_code: embed.add_field(name="Gutschein", value=f"`{promo_code}`", inline=True)
     return embed
 
 async def update_payment_summary_message(channel: discord.TextChannel):
     data = ticket_data.get(channel.id)
     if data and data.get("summary_message_id"):
-        try: 
-            msg = await channel.fetch_message(data["summary_message_id"])
-            await msg.edit(embed=build_payment_summary_embed(channel.id), view=PaymentSummaryView())
-        except: 
-            pass
+        try: msg = await channel.fetch_message(data["summary_message_id"]); await msg.edit(embed=build_payment_summary_embed(channel.id), view=PaymentSummaryView())
+        except: pass
 
 async def send_admin_panel_to_channel(guild: discord.Guild, owner_id: int, ticket_channel_id: int):
     admin_channel = guild.get_channel(ADMIN_PANEL_CHANNEL_ID)
     if isinstance(admin_channel, discord.TextChannel):
         msg = await admin_channel.send(embed=discord.Embed(title="🛠️ GEN ADMIN PANEL", description=f"{premium_divider()}\n**Buyer ID:** `{owner_id}`\n**Ticket ID:** `{ticket_channel_id}`\n{premium_divider()}", color=COLOR_ADMIN), view=AdminPanelView(owner_id=owner_id, ticket_channel_id=ticket_channel_id))
-        if ticket_channel_id in ticket_data: 
-            ticket_data[ticket_channel_id]["admin_message_id"] = msg.id
+        if ticket_channel_id in ticket_data: ticket_data[ticket_channel_id]["admin_message_id"] = msg.id
 
 async def send_summary_and_admin_panels(channel: discord.TextChannel, owner_id: int):
     summary_msg = await channel.send(embed=build_payment_summary_embed(channel.id), view=PaymentSummaryView())
@@ -768,18 +704,13 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     if is_blacklisted(member.id): return False, "You are blacklisted."
     if key not in keys_db: return False, "Key not found."
     if keys_db[key]["used"]: return False, "Already used."
-    pt = keys_db[key]["type"]
-    r = guild.get_role(REDEEM_ROLE_ID)
+    pt = keys_db[key]["type"]; r = guild.get_role(REDEEM_ROLE_ID)
     if not r: return False, "Role not found."
-    
     keys_db[key].update({"used": True, "used_by": str(member.id)})
     save_json(KEYS_FILE, keys_db)
-    
     redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + PRODUCTS[pt]["duration"]).isoformat() if PRODUCTS[pt]["duration"] else None}
     save_json(REDEEMED_FILE, redeemed_db)
-    
-    await member.add_roles(r)
-    return True, pt
+    await member.add_roles(r); return True, pt
 
 # --- VIEWS & MODALS ---
 class CloseConfirmView(discord.ui.View):
@@ -791,130 +722,79 @@ class CloseConfirmView(discord.ui.View):
         if data and data.get("admin_message_id"):
             admin_channel = interaction.guild.get_channel(ADMIN_PANEL_CHANNEL_ID)
             if isinstance(admin_channel, discord.TextChannel):
-                try: 
-                    msg = await admin_channel.fetch_message(data["admin_message_id"])
-                    await msg.delete()
-                except: 
-                    pass
-        ticket_data.pop(interaction.channel.id, None)
-        await asyncio.sleep(2)
-        await interaction.channel.delete()
+                try: msg = await admin_channel.fetch_message(data["admin_message_id"]); await msg.delete()
+                except: pass
+        ticket_data.pop(interaction.channel.id, None); await asyncio.sleep(2); await interaction.channel.delete()
 
 class TicketManageView(discord.ui.View):
     def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
     @discord.ui.button(label="Claim", style=discord.ButtonStyle.secondary, emoji="🎫", custom_id="claim_ticket_button")
-    async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_message(f"{interaction.user.mention} claimed this ticket.")
-        
+    async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_message(f"{interaction.user.mention} claimed this ticket.")
     @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_ticket_button")
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: 
-            return await interaction.response.send_message("No permission.", ephemeral=True)
+        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("No permission.", ephemeral=True)
         await interaction.response.send_message("Are you sure you want to close this ticket?", view=CloseConfirmView(), ephemeral=True)
 
 class PromoCodeModal(discord.ui.Modal, title="Gutscheincode einlösen"):
     code_input = discord.ui.TextInput(label="Promo Code", placeholder="z.B. VALE20", required=True)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
-        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: 
-            return await interaction.response.send_message("Only buyer.", ephemeral=True)
-            
+        if interaction.user.id != self.owner_id and not interaction.user.guild_permissions.manage_channels: return await interaction.response.send_message("Only buyer.", ephemeral=True)
         data = ticket_data.get(interaction.channel.id)
         code = str(self.code_input).strip().upper()
-        if code not in promos_db or promos_db[code]["uses"] <= 0: 
-            return await interaction.response.send_message("❌ Ungültiger Code.", ephemeral=True)
-            
-        data["applied_promo"] = code
-        await update_payment_summary_message(interaction.channel)
+        if code not in promos_db or promos_db[code]["uses"] <= 0: return await interaction.response.send_message("❌ Ungültiger Code.", ephemeral=True)
+        data["applied_promo"] = code; await update_payment_summary_message(interaction.channel)
         await interaction.response.send_message(f"✅ Gutschein `{code}` angewendet! (-{promos_db[code]['discount']}%)", ephemeral=True)
 
 class GenericCryptoTxidModal(discord.ui.Modal, title="Paste your Crypto TXID here"):
     txid_input = discord.ui.TextInput(label="Transaction Hash (TXID)", required=True)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
-        txid = str(self.txid_input).strip()
-        data["last_txid"] = txid
-        data["status"] = "reviewing"
-        
-        review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
-        if review_channel: 
-            await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> Review needed.", embed=discord.Embed(title="🪙 Crypto TXID Submitted", description=f"**Buyer:** {interaction.user.mention}\n**Ticket:** {interaction.channel.mention}\n**TXID:** `{txid}`", color=COLOR_PENDING), view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=interaction.user.id))
-            
+        data = ticket_data.get(interaction.channel.id); txid = str(self.txid_input).strip()
+        data["last_txid"] = txid; data["status"] = "reviewing"; review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
+        if review_channel: await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> Review needed.", embed=discord.Embed(title="🪙 Crypto TXID Submitted", description=f"**Buyer:** {interaction.user.mention}\n**Ticket:** {interaction.channel.mention}\n**TXID:** `{txid}`", color=COLOR_PENDING), view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=interaction.user.id))
         await interaction.channel.send(embed=discord.Embed(title="✅ TXID Submitted", description="Sent to staff.", color=COLOR_SUCCESS))
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("Submitted.", ephemeral=True)
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("Submitted.", ephemeral=True)
 
 class LitecoinTxidModal(discord.ui.Modal, title="Paste your Litecoin TXID here"):
     txid_input = discord.ui.TextInput(label="Litecoin TXID", required=True, min_length=64, max_length=64)
     def __init__(self, owner_id: int): super().__init__(); self.owner_id = owner_id
     async def on_submit(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
-        txid = str(self.txid_input).strip()
-        
-        if txid in used_txids_db: 
-            return await interaction.response.send_message("Already submitted.", ephemeral=True)
-            
+        data = ticket_data.get(interaction.channel.id); txid = str(self.txid_input).strip()
+        if txid in used_txids_db: return await interaction.response.send_message("Already submitted.", ephemeral=True)
         await interaction.response.defer(ephemeral=True, thinking=True)
         tx_data, err = await fetch_ltc_tx(txid)
-        
-        if err or not tx_data: 
-            return await interaction.followup.send(f"API Error. {err}", ephemeral=True)
-            
-        conf = int(tx_data.get("confirmations", 0))
-        f_addr, tot_litoshi = tx_matches_our_address(tx_data, LITECOIN_ADDRESS)
-        tot_ltc = litoshi_to_ltc(tot_litoshi)
-        
-        used_txids_db[txid] = {"user_id": str(interaction.user.id), "used_at": iso_now()}
-        save_json(USED_TXIDS_FILE, used_txids_db)
-        
-        data["last_txid"] = txid
-        data["status"] = "reviewing"
-        
+        if err or not tx_data: return await interaction.followup.send(f"API Error. {err}", ephemeral=True)
+        conf = int(tx_data.get("confirmations", 0)); f_addr, tot_litoshi = tx_matches_our_address(tx_data, LITECOIN_ADDRESS); tot_ltc = litoshi_to_ltc(tot_litoshi)
+        used_txids_db[txid] = {"user_id": str(interaction.user.id), "used_at": iso_now()}; save_json(USED_TXIDS_FILE, used_txids_db)
+        data["last_txid"] = txid; data["status"] = "reviewing"
         emb = discord.Embed(title="🪙 Litecoin TXID Result", description=f"**Address Match:** {'Yes' if f_addr else 'No'}\n**Confirmations:** {conf}\n**Received:** {tot_ltc:.8f} LTC", color=COLOR_SUCCESS if f_addr and conf >= LTC_MIN_CONFIRMATIONS else COLOR_PENDING)
-        await interaction.channel.send(embed=emb)
-        await update_payment_summary_message(interaction.channel)
+        await interaction.channel.send(embed=emb); await update_payment_summary_message(interaction.channel)
         await interaction.followup.send("TXID Check done.", ephemeral=True)
 
 class PaymentActionView(discord.ui.View):
     def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
     @discord.ui.button(label="Promo Code", style=discord.ButtonStyle.secondary, emoji="🎟️", custom_id="apply_promo_button")
-    async def apply_promo(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_modal(PromoCodeModal(owner_id=self.owner_id))
-        
+    async def apply_promo(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(PromoCodeModal(owner_id=self.owner_id))
     @discord.ui.button(label="Payment Sent", style=discord.ButtonStyle.success, emoji="✅", custom_id="payment_sent_button")
     async def payment_sent(self, interaction: discord.Interaction, button: discord.ui.Button):
-        data = ticket_data.get(interaction.channel.id)
-        data["status"] = "reviewing"
-        buyer = interaction.guild.get_member(data["user_id"])
+        data = ticket_data.get(interaction.channel.id); data["status"] = "reviewing"; buyer = interaction.guild.get_member(data["user_id"])
         review_channel = interaction.guild.get_channel(REVIEW_CHANNEL_ID)
-        
-        if review_channel: 
-            await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> New payment to review.", embed=discord.Embed(title="🧾 Payment Review", description=f"Buyer: {buyer.mention}\nTicket: {interaction.channel.mention}", color=COLOR_WARN), view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=buyer.id))
-            
-        await update_payment_summary_message(interaction.channel)
-        await interaction.response.send_message("Staff notified.", ephemeral=True)
-        
+        if review_channel: await review_channel.send(content=f"<@&{STAFF_ROLE_ID}> New payment to review.", embed=discord.Embed(title="🧾 Payment Review", description=f"Buyer: {buyer.mention}\nTicket: {interaction.channel.mention}", color=COLOR_WARN), view=ReviewView(target_channel_id=interaction.channel.id, buyer_id=buyer.id))
+        await update_payment_summary_message(interaction.channel); await interaction.response.send_message("Staff notified.", ephemeral=True)
     @discord.ui.button(label="Submit LTC TXID", style=discord.ButtonStyle.primary, emoji="🪙", custom_id="submit_txid_button")
-    async def submit_txid(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_modal(LitecoinTxidModal(owner_id=self.owner_id))
-        
+    async def submit_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(LitecoinTxidModal(owner_id=self.owner_id))
     @discord.ui.button(label="Submit Crypto TXID", style=discord.ButtonStyle.primary, emoji="🔗", custom_id="submit_generic_txid_button")
-    async def submit_generic_txid(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_modal(GenericCryptoTxidModal(owner_id=self.owner_id))
+    async def submit_generic_txid(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(GenericCryptoTxidModal(owner_id=self.owner_id))
 
 class PaymentSelect(discord.ui.Select):
     def __init__(self):
         options = [discord.SelectOption(label="PayPal", value="paypal", emoji="💸"), discord.SelectOption(label="Litecoin", value="litecoin", emoji="🪙"), discord.SelectOption(label="Ethereum", value="ethereum", emoji="🔷"), discord.SelectOption(label="Solana", value="solana", emoji="🟣"), discord.SelectOption(label="Paysafecard", value="paysafecard", emoji="💳"), discord.SelectOption(label="Amazon Card", value="amazoncard", emoji="🎁")]
         super().__init__(placeholder="💳 Choose payment method", min_values=1, max_values=1, options=options, custom_id="buy_payment_select")
     async def callback(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
-        data["payment_key"] = self.values[0]
-        buyer = interaction.guild.get_member(data["user_id"])
+        data = ticket_data.get(interaction.channel.id); data["payment_key"] = self.values[0]; buyer = interaction.guild.get_member(data["user_id"])
         ltc_price = await fetch_ltc_price_eur() if self.values[0] == "litecoin" else None
-        
-        await interaction.response.send_message(embed=build_order_summary(data["product_key"], self.values[0], buyer, ltc_price), view=PaymentActionView(owner_id=data["user_id"]))
-        await update_payment_summary_message(interaction.channel)
+        await interaction.response.send_message(embed=build_order_summary(data["product_key"], self.values[0], buyer, ltc_price), view=PaymentActionView(owner_id=data["user_id"])); await update_payment_summary_message(interaction.channel)
 
 class PaymentSelectView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(PaymentSelect())
@@ -924,10 +804,8 @@ class ProductSelect(discord.ui.Select):
         options = [discord.SelectOption(label="1 Day", description="5€", value="day_1", emoji="📅"), discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"), discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️")]
         super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options, custom_id="buy_product_select")
     async def callback(self, interaction: discord.Interaction):
-        data = ticket_data.get(interaction.channel.id)
-        data["product_key"] = self.values[0]
-        await interaction.response.send_message(embed=discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO), view=PaymentSelectView())
-        await update_payment_summary_message(interaction.channel)
+        data = ticket_data.get(interaction.channel.id); data["product_key"] = self.values[0]
+        await interaction.response.send_message(embed=discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO), view=PaymentSelectView()); await update_payment_summary_message(interaction.channel)
 
 class ProductSelectView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(ProductSelect())
@@ -935,98 +813,64 @@ class ProductSelectView(discord.ui.View):
 class BuySetupView(discord.ui.View):
     def __init__(self, owner_id: int): super().__init__(timeout=None); self.owner_id = owner_id
     @discord.ui.button(label="Choose Product", style=discord.ButtonStyle.primary, emoji="📦", custom_id="choose_product_button")
-    async def choose_product(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_message("Select product:", view=ProductSelectView(), ephemeral=True)
-        
+    async def choose_product(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_message("Select product:", view=ProductSelectView(), ephemeral=True)
     @discord.ui.button(label="Close", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_buy_ticket_button")
-    async def close_buy_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_message("Are you sure?", view=CloseConfirmView(), ephemeral=True)
+    async def close_buy_ticket(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_message("Are you sure?", view=CloseConfirmView(), ephemeral=True)
 
 class PaymentSummaryView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", custom_id="refresh_payment_summary")
-    async def refresh_summary(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.edit_message(embed=build_payment_summary_embed(interaction.channel.id), view=PaymentSummaryView())
+    async def refresh_summary(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.edit_message(embed=build_payment_summary_embed(interaction.channel.id), view=PaymentSummaryView())
 
 class AdminPanelView(discord.ui.View):
     def __init__(self, owner_id: int, ticket_channel_id: int): super().__init__(timeout=None); self.owner_id = owner_id; self.ticket_channel_id = ticket_channel_id
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️", custom_id="adminpanel_approve")
-    async def approve_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await ReviewView(self.ticket_channel_id, self.owner_id)._approve_logic(interaction)
-        
+    async def approve_button(self, interaction: discord.Interaction, button: discord.ui.Button): await ReviewView(self.ticket_channel_id, self.owner_id)._approve_logic(interaction)
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️", custom_id="adminpanel_deny")
-    async def deny_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await ReviewView(self.ticket_channel_id, self.owner_id)._deny_logic(interaction)
+    async def deny_button(self, interaction: discord.Interaction, button: discord.ui.Button): await ReviewView(self.ticket_channel_id, self.owner_id)._deny_logic(interaction)
 
 class ReviewView(discord.ui.View):
     def __init__(self, target_channel_id: int, buyer_id: int): super().__init__(timeout=None); self.target_channel_id = target_channel_id; self.buyer_id = buyer_id
     async def _approve_logic(self, interaction: discord.Interaction):
-        channel = interaction.guild.get_channel(self.target_channel_id)
-        data = ticket_data.get(self.target_channel_id)
-        buyer = interaction.guild.get_member(self.buyer_id)
-        
-        invoice_id = build_invoice_id()
-        data["invoice_id"] = invoice_id
-        data["status"] = "approved"
+        channel = interaction.guild.get_channel(self.target_channel_id); data = ticket_data.get(self.target_channel_id); buyer = interaction.guild.get_member(self.buyer_id)
+        invoice_id = build_invoice_id(); data["invoice_id"] = invoice_id; data["status"] = "approved"
         
         promo_code = data.get("applied_promo")
         promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-        if promo_code and promo_code in promos_db: 
-            promos_db[promo_code]["uses"] -= 1
-            save_json(PROMOS_FILE, promos_db)
+        if promo_code and promo_code in promos_db: promos_db[promo_code]["uses"] -= 1; save_json(PROMOS_FILE, promos_db)
 
         generated_key = generate_key(data["product_key"], ticket_id=self.target_channel_id)
-        keys_db[generated_key]["bound_user_id"] = str(buyer.id)
-        save_json(KEYS_FILE, keys_db)
-        
+        keys_db[generated_key]["bound_user_id"] = str(buyer.id); save_json(KEYS_FILE, keys_db)
         final_price = get_price(data["product_key"], buyer, promo_discount)
         create_invoice_record(invoice_id, buyer.id, data["product_key"], data["payment_key"], generated_key, self.target_channel_id, final_price, is_reseller_dc(buyer))
         
         await channel.send(embed=discord.Embed(title="🧾 Payment Approved", description=f"**Invoice:** `{invoice_id}`\n**Price:** {final_price}€\n**Key:** `{generated_key}`", color=COLOR_SUCCESS))
         await update_payment_summary_message(channel)
-        
-        if buyer: 
-            await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
+        if buyer: await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
         await interaction.response.send_message("Approved.", ephemeral=True)
 
     async def _deny_logic(self, interaction: discord.Interaction):
         channel = interaction.guild.get_channel(self.target_channel_id)
         await channel.send(embed=discord.Embed(title="❌ Denied", description="Payment was denied.", color=COLOR_DENY))
-        if self.target_channel_id in ticket_data: 
-            ticket_data[self.target_channel_id]["status"] = "denied"
-        await update_payment_summary_message(channel)
-        await interaction.response.send_message("Denied.", ephemeral=True)
+        if self.target_channel_id in ticket_data: ticket_data[self.target_channel_id]["status"] = "denied"
+        await update_payment_summary_message(channel); await interaction.response.send_message("Denied.", ephemeral=True)
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success, emoji="✔️", custom_id="review_approve_button")
-    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await self._approve_logic(interaction)
-        
+    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button): await self._approve_logic(interaction)
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="✖️", custom_id="review_deny_button")
-    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await self._deny_logic(interaction)
+    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button): await self._deny_logic(interaction)
 
 async def create_ticket_channel(interaction: discord.Interaction, ticket_type: str):
     guild, user = interaction.guild, interaction.user
-    if is_blacklisted(user.id): 
-        return await interaction.response.send_message("Blacklisted.", ephemeral=True)
-        
+    if is_blacklisted(user.id): return await interaction.response.send_message("Blacklisted.", ephemeral=True)
     existing = await find_existing_ticket(guild, user)
-    if existing: 
-        return await interaction.response.send_message(f"Ticket open: {existing.mention}", ephemeral=True)
-        
+    if existing: return await interaction.response.send_message(f"Ticket open: {existing.mention}", ephemeral=True)
     category = guild.get_channel(BUY_CATEGORY_ID if ticket_type == "buy" else SUPPORT_CATEGORY_ID)
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(view_channel=False), 
-        user: discord.PermissionOverwrite(view_channel=True, send_messages=True)
-    }
-    
+    overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False), user: discord.PermissionOverwrite(view_channel=True, send_messages=True)}
     bot_member = guild.get_member(bot.user.id)
-    if bot_member: 
-        overwrites[bot_member] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
-        
+    if bot_member: overwrites[bot_member] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
     staff_role = guild.get_role(STAFF_ROLE_ID)
-    if staff_role: 
-        overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True)
+    if staff_role: overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True)
 
     channel_name = f"{ticket_type}-{user.name}"[:90]
     channel = await guild.create_text_channel(name=channel_name, category=category, overwrites=overwrites, topic=f"ticket_owner:{user.id}")
@@ -1043,28 +887,22 @@ async def create_ticket_channel(interaction: discord.Interaction, ticket_type: s
 class MainTicketPanelView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Support", style=discord.ButtonStyle.primary, emoji="💠", custom_id="main_support_ticket_button")
-    async def support_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await create_ticket_channel(interaction, "support")
-        
+    async def support_button(self, interaction: discord.Interaction, button: discord.ui.Button): await create_ticket_channel(interaction, "support")
     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success, emoji="🛒", custom_id="main_buy_ticket_button")
-    async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await create_ticket_channel(interaction, "buy")
+    async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button): await create_ticket_channel(interaction, "buy")
 
 class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
     key_input = discord.ui.TextInput(label="Key", required=True)
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         ok, res = await redeem_key_for_user(interaction.guild, interaction.user, str(self.key_input).strip().upper())
-        if ok: 
-            await interaction.followup.send(f"✅ Success! You received the {PRODUCTS[res]['label']} role.", ephemeral=True)
-        else: 
-            await interaction.followup.send(f"❌ {res}", ephemeral=True)
+        if ok: await interaction.followup.send(f"✅ Success! You received the {PRODUCTS[res]['label']} role.", ephemeral=True)
+        else: await interaction.followup.send(f"❌ {res}", ephemeral=True)
 
 class RedeemPanelView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Redeem", style=discord.ButtonStyle.success, emoji="🎟️", custom_id="redeem_key_button")
-    async def redeem_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
-        await interaction.response.send_modal(RedeemKeyModal())
+    async def redeem_button(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.send_modal(RedeemKeyModal())
 
 # =========================================================
 # EVENTS (HIER IST DAS WELCOME SYSTEM WIEDER DRIN!)
@@ -1086,33 +924,23 @@ async def on_member_join(member):
 @bot.tree.command(name="gen_admin_key", description="Generiert einen ADMIN-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_admin_key(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator: 
-        return await interaction.response.send_message("Admins only.", ephemeral=True)
-        
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     new_key = f"VALE-ADMIN-{random_block(6)}"
     webkeys_db[new_key] = {"role": "admin", "used": False, "created_by": str(interaction.user.name), "created_at": iso_now()}
     save_json(WEBKEYS_FILE, webkeys_db)
-    
     ch = interaction.guild.get_channel(WEB_KEY_CHANNEL_ID)
-    if ch: 
-        await ch.send(embed=discord.Embed(title="🔐 Admin Registration Key", description=f"**Erstellt von:** {interaction.user.mention}\n**Key:** `{new_key}`\n\nNutze diesen Key, um dir einen Admin-Account auf der Website zu erstellen.", color=COLOR_MAIN))
-        
+    if ch: await ch.send(embed=discord.Embed(title="🔐 Admin Registration Key", description=f"**Erstellt von:** {interaction.user.mention}\n**Key:** `{new_key}`\n\nNutze diesen Key, um dir einen Admin-Account auf der Website zu erstellen.", color=COLOR_MAIN))
     await interaction.response.send_message(f"Admin Invite Key generiert: `{new_key}`", ephemeral=True)
 
 @bot.tree.command(name="gen_reseller_key", description="Generiert einen RESELLER-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_reseller_key(interaction: discord.Interaction, user: discord.Member):
-    if not interaction.user.guild_permissions.administrator: 
-        return await interaction.response.send_message("Admins only.", ephemeral=True)
-        
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     new_key = f"VALE-RES-{random_block(6)}"
     webkeys_db[new_key] = {"role": "reseller", "used": False, "created_for": str(user.name), "created_at": iso_now()}
     save_json(WEBKEYS_FILE, webkeys_db)
-    
     ch = interaction.guild.get_channel(WEB_KEY_CHANNEL_ID)
-    if ch: 
-        await ch.send(embed=discord.Embed(title="🔐 Reseller Registration Key", description=f"**Für User:** {user.mention}\n**Key:** `{new_key}`\n\nMit diesem Key kannst du dich registrieren.", color=COLOR_SUCCESS))
-        
+    if ch: await ch.send(embed=discord.Embed(title="🔐 Reseller Registration Key", description=f"**Für User:** {user.mention}\n**Key:** `{new_key}`\n\nMit diesem Key kannst du dich registrieren.", color=COLOR_SUCCESS))
     await interaction.response.send_message(f"Reseller Invite Key generiert: `{new_key}`", ephemeral=True)
 
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
@@ -1129,11 +957,7 @@ async def send_redeem_panel(interaction: discord.Interaction):
 
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du?", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
-@app_commands.choices(sterne=[
-    app_commands.Choice(name="⭐⭐⭐⭐⭐", value=5), 
-    app_commands.Choice(name="⭐⭐⭐⭐", value=4), 
-    app_commands.Choice(name="⭐⭐⭐", value=3)
-])
+@app_commands.choices(sterne=[app_commands.Choice(name="⭐⭐⭐⭐⭐", value=5), app_commands.Choice(name="⭐⭐⭐⭐", value=4), app_commands.Choice(name="⭐⭐⭐", value=3)])
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[int], produkt: str, bewertung: str):
     ch = interaction.guild.get_channel(VOUCH_CHANNEL_ID)
@@ -1148,9 +972,7 @@ async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[in
 @bot.tree.command(name="send_rules", description="Postet das Regelwerk")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_rules(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator: 
-        return await interaction.response.send_message("Admins only.", ephemeral=True)
-        
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     embed = discord.Embed(title="📜 Server Rules", description="**1. Be Respectful**\nBehandel alle Mitglieder mit Respekt. Keine Beleidigungen, kein Rassismus, kein Spam.\n\n**2. No DM Advertising**\nKeine Werbung für andere Server oder Dienste in den DMs unserer Nutzer.\n\n**3. Support & Tickets**\nBitte eröffne für alle Anfragen oder Käufe ein Ticket im <#1490336321913356459> Bereich. Kein Support in normalen Chats.\n\n**4. Scam & Fraud**\nBetrugsversuche beim Kauf führen zu einem permanenten Ban und Blacklist.", color=COLOR_WELCOME)
     embed.set_image(url=WELCOME_BANNER_URL)
     await interaction.channel.send(embed=embed)
@@ -1159,9 +981,7 @@ async def send_rules(interaction: discord.Interaction):
 @bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def test_welcome(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator: 
-        return await interaction.response.send_message("Admins only.", ephemeral=True)
-        
+    if not interaction.user.guild_permissions.administrator: return await interaction.response.send_message("Admins only.", ephemeral=True)
     await interaction.response.send_message("Simuliere Server-Beitritt...", ephemeral=True)
     bot.dispatch('member_join', interaction.user)
 
@@ -1171,35 +991,18 @@ async def test_welcome(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     global keys_db, redeemed_db, used_txids_db, used_paysafe_db, used_amazon_db, blacklist_db, invoices_db, promos_db, activity_db, webkeys_db, users_db
-    keys_db = load_json(KEYS_FILE, {})
-    redeemed_db = load_json(REDEEMED_FILE, {})
-    used_txids_db = load_json(USED_TXIDS_FILE, {})
-    used_paysafe_db = load_json(USED_PAYSAFE_FILE, {})
-    used_amazon_db = load_json(USED_AMAZON_FILE, {})
-    blacklist_db = load_json(BLACKLIST_FILE, {})
-    invoices_db = load_json(INVOICES_FILE, {})
-    promos_db = load_json(PROMOS_FILE, {})
-    activity_db = load_json(ACTIVITY_FILE, [])
-    webkeys_db = load_json(WEBKEYS_FILE, {})
-    users_db = load_json(USERS_FILE, {})
+    keys_db = load_json(KEYS_FILE, {}); redeemed_db = load_json(REDEEMED_FILE, {}); used_txids_db = load_json(USED_TXIDS_FILE, {})
+    used_paysafe_db = load_json(USED_PAYSAFE_FILE, {}); used_amazon_db = load_json(USED_AMAZON_FILE, {}); blacklist_db = load_json(BLACKLIST_FILE, {})
+    invoices_db = load_json(INVOICES_FILE, {}); promos_db = load_json(PROMOS_FILE, {}); activity_db = load_json(ACTIVITY_FILE, [])
+    webkeys_db = load_json(WEBKEYS_FILE, {}); users_db = load_json(USERS_FILE, {})
 
     bot.loop.create_task(start_web_server())
-    bot.add_view(MainTicketPanelView())
-    bot.add_view(RedeemPanelView())
-    bot.add_view(TicketManageView(owner_id=0))
-    bot.add_view(BuySetupView(owner_id=0))
-    bot.add_view(PaymentActionView(owner_id=0))
-    bot.add_view(PaymentSummaryView())
-    bot.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0))
-    bot.add_view(ReviewView(target_channel_id=0, buyer_id=0))
+    bot.add_view(MainTicketPanelView()); bot.add_view(RedeemPanelView()); bot.add_view(TicketManageView(owner_id=0))
+    bot.add_view(BuySetupView(owner_id=0)); bot.add_view(PaymentActionView(owner_id=0)); bot.add_view(PaymentSummaryView())
+    bot.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0)); bot.add_view(ReviewView(target_channel_id=0, buyer_id=0))
 
-    try: 
-        bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
-        await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print("✅ SYNC ERFOLGREICH!")
-    except Exception as e: 
-        print(f"❌ Slash command sync error: {e}")
-        
+    try: bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)); await bot.tree.sync(guild=discord.Object(id=GUILD_ID)); print("✅ SYNC ERFOLGREICH!")
+    except Exception as e: print(f"❌ Slash command sync error: {e}")
     print(f"Bot is ready. Logged in as: {bot.user}")
 
 bot.run(TOKEN)
