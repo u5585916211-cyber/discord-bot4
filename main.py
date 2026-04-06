@@ -55,6 +55,9 @@ WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/14903330423282
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d4788d&is=69d3270d&hm=68f7da51ae2a3eb59d3bbfb8242799a0da4d5f47c0cf1c250d6d2e4cea7a7ebc&=&format=webp&width=548&height=548"
 
+# 🔥 NEU: Der krass leuchtende lila Neon-Strand Hintergrund für die Website
+WEBSITE_BACKGROUND_URL = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
+
 # Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
@@ -177,7 +180,7 @@ bot = ValeBot()
 # =========================================================
 # 🌍 WEB DASHBOARD HTML
 # =========================================================
-WEB_HTML = """
+WEB_HTML = f"""
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
@@ -188,175 +191,195 @@ WEB_HTML = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; }
+        body {{ 
+            font-family: 'Inter', sans-serif; 
+            background-color: #050505; 
+            color: #e5e7eb; 
+            margin: 0;
+            background-image: url('{WEBSITE_BACKGROUND_URL}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
         
-        .synthwave-bg { background: linear-gradient(to bottom, #090014, #2a0845, #140024); }
-        .synthwave-sun {
-            position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);
-            width: 400px; height: 400px; background: linear-gradient(to bottom, #f9a8d4, #9333ea);
-            border-radius: 50%; box-shadow: 0 0 80px #a855f7; z-index: 1; opacity: 0.8;
-        }
-        .synthwave-grid {
-            position: absolute; bottom: 0; left: -50%; width: 200%; height: 40%;
-            background-image: linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px), linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
-            background-size: 60px 60px; transform: perspective(600px) rotateX(60deg);
-            animation: gridMove 2s linear infinite; z-index: 2;
-        }
-        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
+        /* Dark Overlay über dem Strand-Hintergrund für bessere Lesbarkeit */
+        .bg-overlay {{
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 0, 20, 0.6);
+            z-index: -1;
+            backdrop-filter: blur(3px);
+        }}
 
-        .glass { background: rgba(10, 5, 20, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(168, 85, 247, 0.3); }
-        .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9); }
-        .glow-box { box-shadow: 0 0 40px rgba(147, 51, 234, 0.4); }
-        .hidden-view { display: none !important; }
-        .tab-content { display: none; } 
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #050505; } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
+        .glass {{ background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }}
+        .glow-text {{ text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }}
+        .glow-box {{ box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }}
+        .hidden-view {{ display: none !important; }}
+        .tab-content {{ display: none; }} 
+        .tab-content.active {{ display: block; animation: fadeIn 0.3s ease; }}
+        @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+        ::-webkit-scrollbar {{ width: 6px; }} ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.5); }} ::-webkit-scrollbar-thumb {{ background: #9333ea; border-radius: 4px; }}
     </style>
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
 
-    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] bg-opacity-90 z-[999] flex flex-col items-center justify-center hidden-view backdrop-blur-md">
-        <i class="fa-solid fa-satellite-dish animate-pulse text-purple-500 text-6xl mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]"></i>
+    <div class="bg-overlay"></div>
+
+    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] bg-opacity-95 z-[999] flex flex-col items-center justify-center hidden-view backdrop-blur-md">
+        <i class="fa-solid fa-satellite-dish animate-pulse text-purple-500 text-6xl mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]"></i>
         <h2 class="text-3xl font-black text-white tracking-widest glow-text">RECONNECTING</h2>
         <p class="text-gray-400 mt-3 font-bold">Verbindung zum Server wird wiederhergestellt...</p>
     </div>
 
-    <div id="view-auth" class="flex w-full h-full items-center justify-center relative synthwave-bg">
-        <div class="synthwave-sun"></div><div class="synthwave-grid"></div>
-        
-        <div class="glass p-10 rounded-3xl max-w-md w-full relative z-10 glow-box">
+    <div id="view-auth" class="flex w-full h-full items-center justify-center relative">
+        <div class="glass p-10 rounded-3xl max-w-md w-full relative z-10 glow-box border-2 border-purple-500/50">
             <div class="text-center mb-8">
-                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)] object-contain">
+                <img src="{WEBSITE_LOGO_URL}" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
                 <h1 class="text-3xl font-black text-white tracking-widest glow-text mt-4">VALE GEN</h1>
             </div>
 
-            <div class="flex border-b border-purple-500/30 mb-6">
+            <div class="flex border-b border-purple-500/50 mb-6">
                 <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">LOGIN</button>
-                <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent">CUSTOMER</button>
-                <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent">REGISTER</button>
+                <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">CUSTOMER</button>
+                <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">REGISTER</button>
             </div>
 
             <div id="form-login" class="space-y-4">
-                <input type="text" id="l-user" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Username">
-                <input type="password" id="l-pass" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Password">
-                <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.6)]">LOGIN</button>
+                <input type="text" id="l-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Username">
+                <input type="password" id="l-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Password">
+                <button onclick="login()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">LOGIN</button>
             </div>
 
             <div id="form-customer" class="space-y-4 hidden-view">
-                <p class="text-xs text-gray-400 text-center font-bold mb-2">Log in with your purchased Key</p>
-                <input type="text" id="c-key" class="w-full bg-black/60 border border-pink-500/50 rounded-xl px-4 py-3 text-pink-400 font-mono focus:border-pink-400 outline-none transition tracking-wider text-center" placeholder="GEN-...">
-                <button onclick="customerLogin()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(236,72,153,0.6)]">ACCESS DASHBOARD</button>
+                <p class="text-xs text-gray-300 text-center font-bold mb-2">Log in with your purchased Key</p>
+                <input type="text" id="c-key" class="w-full bg-black/70 border border-pink-500/60 rounded-xl px-4 py-3 text-pink-400 font-mono focus:border-pink-400 outline-none transition tracking-wider text-center shadow-inner" placeholder="GEN-...">
+                <button onclick="customerLogin()" class="w-full bg-gradient-to-r from-pink-700 to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(236,72,153,0.6)]">ACCESS DASHBOARD</button>
             </div>
 
             <div id="form-register" class="space-y-4 hidden-view">
-                <input type="text" id="r-user" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Choose Username">
-                <input type="password" id="r-pass" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Choose Password">
-                <input type="text" id="r-key" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-400 outline-none transition" placeholder="Invitation Key (VALE-...)">
-                <button onclick="register()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.6)]">CREATE ACCOUNT</button>
+                <input type="text" id="r-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Username">
+                <input type="password" id="r-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Password">
+                <input type="text" id="r-key" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-400 outline-none transition shadow-inner" placeholder="Invitation Key (VALE-...)">
+                <button onclick="register()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">CREATE ACCOUNT</button>
             </div>
             
             <p id="auth-error" class="text-red-400 mt-4 text-sm text-center font-bold hidden"></p>
         </div>
     </div>
 
-    <div id="view-customer" class="flex w-full h-full hidden-view synthwave-bg p-8">
-        <div class="absolute inset-0 z-0 opacity-20"><div class="synthwave-grid"></div></div>
+    <div id="view-customer" class="flex w-full h-full hidden-view p-8">
         <div class="max-w-3xl mx-auto w-full relative z-10">
             <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
                 <div class="flex items-center">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)] object-contain">
+                    <img src="{WEBSITE_LOGO_URL}" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
                     <div>
                         <h1 class="text-2xl font-black text-white">Customer Portal</h1>
-                        <p class="text-sm text-pink-400 font-mono" id="cust-key-display">GEN-...</p>
+                        <p class="text-sm text-pink-400 font-mono font-bold" id="cust-key-display">GEN-...</p>
                     </div>
                 </div>
-                <button onclick="logout()" class="bg-red-500/10 hover:bg-red-600 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-white px-4 py-2 rounded-lg transition font-bold shadow-[0_0_10px_rgba(220,38,38,0.3)]">
+                <button onclick="logout()" class="bg-red-500/20 hover:bg-red-600 border border-red-500/50 hover:border-red-500 text-red-200 hover:text-white px-5 py-2 rounded-xl transition font-bold shadow-[0_0_15px_rgba(220,38,38,0.4)]">
                     <i class="fa-solid fa-power-off mr-2"></i>Logout
                 </button>
             </header>
             
-            <div class="glass p-8 rounded-3xl shadow-[0_0_30px_rgba(236,72,153,0.2)] text-center">
-                <h2 class="text-gray-400 font-bold uppercase tracking-widest mb-2">Your Product</h2>
-                <h3 class="text-4xl font-black text-white glow-text mb-8" id="cust-prod">Loading...</h3>
+            <div class="glass p-10 rounded-3xl shadow-[0_0_40px_rgba(236,72,153,0.3)] text-center border-t-4 border-pink-500">
+                <h2 class="text-gray-300 font-bold uppercase tracking-widest mb-2">Your Product</h2>
+                <h3 class="text-5xl font-black text-white glow-text mb-10" id="cust-prod">Loading...</h3>
                 
                 <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="bg-black/50 p-6 rounded-2xl border border-pink-500/30">
-                        <i class="fa-solid fa-shield-halved text-3xl text-pink-400 mb-3"></i>
-                        <p class="text-sm text-gray-400 font-bold">Status</p>
-                        <p class="text-xl font-black text-white" id="cust-status">Loading</p>
+                    <div class="bg-black/60 p-6 rounded-2xl border border-pink-500/50 shadow-inner">
+                        <i class="fa-solid fa-shield-halved text-4xl text-pink-400 mb-4 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)]"></i>
+                        <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">Status</p>
+                        <p class="text-2xl font-black text-white mt-1" id="cust-status">Loading</p>
                     </div>
-                    <div class="bg-black/50 p-6 rounded-2xl border border-purple-500/30">
-                        <i class="fa-brands fa-discord text-3xl text-purple-400 mb-3"></i>
-                        <p class="text-sm text-gray-400 font-bold">Bound To (Discord ID)</p>
-                        <p class="text-xl font-mono text-white" id="cust-discord">None</p>
+                    <div class="bg-black/60 p-6 rounded-2xl border border-purple-500/50 shadow-inner">
+                        <i class="fa-brands fa-discord text-4xl text-purple-400 mb-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]"></i>
+                        <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">Bound To (Discord ID)</p>
+                        <p class="text-xl font-mono text-white mt-1" id="cust-discord">None</p>
                     </div>
                 </div>
-                <p class="text-sm text-gray-500">Created: <span id="cust-created"></span></p>
+                <p class="text-sm text-gray-400 font-bold">Created: <span id="cust-created" class="text-white"></span></p>
             </div>
         </div>
     </div>
 
-    <div id="view-admin" class="flex w-full h-full hidden-view synthwave-bg">
-        <div class="absolute inset-0 z-0 opacity-20"><div class="synthwave-grid"></div></div>
-        <aside class="w-64 glass border-r border-purple-500/30 flex flex-col justify-between z-10 relative">
+    <div id="view-admin" class="flex w-full h-full hidden-view">
+        <aside class="w-64 glass border-r border-purple-500/40 flex flex-col justify-between z-20 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
             <div>
-                <div class="h-32 flex items-center justify-center border-b border-purple-500/30 px-4">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-3 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] object-contain">
-                    <span class="text-xl font-black text-white glow-text">ADMIN</span>
+                <div class="h-32 flex items-center justify-center border-b border-purple-500/40 px-4 bg-black/20">
+                    <img src="{WEBSITE_LOGO_URL}" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
+                    <span class="text-2xl font-black text-white glow-text">ADMIN</span>
                 </div>
-                <nav class="p-4 space-y-2 mt-2">
-                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/30 font-bold border border-purple-500/50 transition"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
-                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-bolt w-6"></i> Generator</button>
-                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-key w-6"></i> Key Manager</button>
-                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-users w-6"></i> Team</button>
-                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-tags w-6"></i> Promos</button>
-                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-search w-6"></i> Database</button>
-                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-satellite-dish w-6"></i> Broadcast</button>
-                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-skull w-6"></i> Blacklist</button>
+                <nav class="p-4 space-y-3 mt-4">
+                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition">
+                        <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+                    </button>
+                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-bolt w-6 text-yellow-400"></i> Generator
+                    </button>
+                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-key w-6 text-purple-400"></i> Key Manager
+                    </button>
+                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-users w-6 text-blue-400"></i> Team
+                    </button>
+                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-tags w-6 text-pink-400"></i> Promos
+                    </button>
+                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-search w-6 text-green-400"></i> Database
+                    </button>
+                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-satellite-dish w-6 text-orange-400"></i> Broadcast
+                    </button>
+                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
+                        <i class="fa-solid fa-skull w-6 text-red-500"></i> Blacklist
+                    </button>
                 </nav>
             </div>
-            <div class="p-6 border-t border-purple-500/30 text-center">
-                <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold transition bg-black/40 px-6 py-2 rounded-xl border border-red-500/30 shadow-[0_0_10px_rgba(220,38,38,0.3)]"><i class="fa-solid fa-power-off mr-1"></i> LOGOUT</button>
+            <div class="p-6 border-t border-purple-500/40 text-center bg-black/20">
+                <button onclick="logout()" class="w-full text-red-400 hover:text-white font-bold transition bg-red-600/20 hover:bg-red-600 px-6 py-3 rounded-xl border border-red-500/50 shadow-[0_0_15px_rgba(220,38,38,0.4)]">
+                    <i class="fa-solid fa-power-off mr-2"></i> LOGOUT
+                </button>
             </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto p-8 relative z-10">
             <div class="max-w-7xl mx-auto">
-                <header class="flex justify-between items-center mb-8 glass p-4 rounded-2xl">
-                    <h2 id="page-title" class="text-3xl font-black text-white tracking-wide uppercase">Dashboard</h2>
+                <header class="flex justify-between items-center mb-8 glass p-5 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                    <h2 id="page-title" class="text-3xl font-black text-white tracking-widest uppercase glow-text">Dashboard</h2>
                     <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-blue-500/30">
-                            <i class="fa-brands fa-discord text-blue-400"></i> <span id="dc-members" class="text-white font-bold text-sm">0</span>
+                        <div class="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-full border border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                            <i class="fa-brands fa-discord text-blue-400"></i> <span id="dc-members" class="text-white font-bold">0</span>
                         </div>
-                        <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-yellow-500/30">
-                            <i class="fa-solid fa-ticket text-yellow-400"></i> <span id="dc-tickets" class="text-white font-bold text-sm">0</span>
+                        <div class="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-full border border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+                            <i class="fa-solid fa-ticket text-yellow-400"></i> <span id="dc-tickets" class="text-white font-bold">0</span>
                         </div>
-                        <span class="text-sm text-gray-300 ml-2">Admin <span id="admin-name" class="text-purple-400 font-bold"></span></span>
+                        <span class="text-sm text-gray-300 ml-2 font-bold">Admin <span id="admin-name" class="text-purple-400 font-black tracking-wider ml-1"></span></span>
                     </div>
                 </header>
 
                 <div id="dash" class="tab-content active">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Total Revenue</p>
-                            <h3 class="text-4xl font-black text-white mt-1 glow-text" id="stat-rev">0.00€</h3>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]">
+                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                            <h3 class="text-5xl font-black text-white mt-2 glow-text" id="stat-rev">0.00€</h3>
                         </div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.2)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Orders Today</p>
-                            <h3 class="text-4xl font-black text-white mt-1" id="stat-orders">0</h3>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500 shadow-[0_0_25px_rgba(236,72,153,0.3)]">
+                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Orders Today</p>
+                            <h3 class="text-5xl font-black text-white mt-2" id="stat-orders">0</h3>
                         </div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase">Active Keys</p>
-                            <h3 class="text-4xl font-black text-white mt-1" id="stat-keys">0</h3>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]">
+                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Active Keys</p>
+                            <h3 class="text-5xl font-black text-white mt-2" id="stat-keys">0</h3>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="lg:col-span-2 glass p-6 rounded-2xl">
+                        <div class="lg:col-span-2 glass p-6 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
                             <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3>
                             <canvas id="revenueChart" height="100"></canvas>
                         </div>
-                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col">
+                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.5)]">
                             <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3>
                             <div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
                         </div>
@@ -364,37 +387,37 @@ WEB_HTML = """
                 </div>
                 
                 <div id="gen" class="tab-content">
-                    <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 max-w-2xl shadow-[0_0_20px_rgba(168,85,247,0.3)]">
-                        <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access Keys (Admin)</h2>
-                        <div class="space-y-4">
-                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                                <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                    <div class="glass p-8 rounded-3xl border-t-4 border-purple-500 max-w-2xl mx-auto shadow-[0_0_40px_rgba(168,85,247,0.4)] mt-10">
+                        <h2 class="text-2xl font-black mb-8 text-center text-white glow-text uppercase tracking-widest"><i class="fa-solid fa-bolt mr-3 text-yellow-400"></i>Generator</h2>
+                        <div class="space-y-5">
+                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]">
+                                <span class="font-black text-xl tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-2xl text-purple-400"></i>
                             </button>
-                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                                <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]">
+                                <span class="font-black text-xl tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-2xl text-purple-400"></i>
                             </button>
-                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
-                                <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
+                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)] hover:shadow-[0_0_40px_rgba(236,72,153,0.8)]">
+                                <span class="font-black text-xl tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-2xl text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div id="keys" class="tab-content">
-                    <div class="glass rounded-2xl overflow-hidden shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                        <div class="p-6 border-b border-purple-500/30">
-                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-key mr-2 text-purple-400"></i>Generated Keys</h3>
+                    <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.2)] border border-purple-500/30">
+                        <div class="p-6 border-b border-purple-500/40 bg-black/40">
+                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-key mr-3 text-purple-400"></i>Key Database</h3>
                         </div>
-                        <div class="overflow-x-auto max-h-[600px]">
+                        <div class="overflow-x-auto max-h-[600px] p-2">
                             <table class="w-full text-left text-sm whitespace-nowrap">
-                                <thead class="bg-black/60 border-b border-purple-500/30 sticky top-0 backdrop-blur-md">
+                                <thead class="bg-purple-900/20 text-purple-200 sticky top-0 backdrop-blur-xl z-10">
                                     <tr>
-                                        <th class="px-6 py-4 text-purple-300">Key</th>
-                                        <th class="px-6 py-4 text-purple-300">Type</th>
-                                        <th class="px-6 py-4 text-purple-300">Creator</th>
-                                        <th class="px-6 py-4 text-purple-300">Used By (ID)</th>
-                                        <th class="px-6 py-4 text-purple-300">Status</th>
-                                        <th class="px-6 py-4 text-right text-purple-300">Action</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Key</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Type</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Creator</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Used By (ID)</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Status</th>
+                                        <th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-keys" class="divide-y divide-purple-500/20"></tbody>
@@ -404,120 +427,133 @@ WEB_HTML = """
                 </div>
 
                 <div id="team" class="tab-content">
-                    <div class="glass rounded-2xl overflow-hidden shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                        <div class="p-6 border-b border-purple-500/30">
-                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-users mr-2 text-purple-400"></i>Reseller Management</h3>
+                    <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.2)] border border-blue-500/30">
+                        <div class="p-6 border-b border-blue-500/40 bg-black/40">
+                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-users mr-3 text-blue-400"></i>Reseller Management</h3>
                         </div>
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-black/60 border-b border-purple-500/30">
-                                <tr>
-                                    <th class="px-6 py-4 text-purple-300">Username</th>
-                                    <th class="px-6 py-4 text-purple-300">Password</th>
-                                    <th class="px-6 py-4 text-purple-300">Generated Keys</th>
-                                    <th class="px-6 py-4 text-right text-purple-300">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-team" class="divide-y divide-purple-500/20"></tbody>
-                        </table>
+                        <div class="p-2">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-blue-900/20 text-blue-200">
+                                    <tr>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Username</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Password</th>
+                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Generated Keys</th>
+                                        <th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-team" class="divide-y divide-blue-500/20"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div id="promos" class="tab-content">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="md:col-span-1 glass p-6 rounded-2xl border-t-2 border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.2)]">
-                            <h3 class="text-lg font-bold text-white mb-4">New Promo</h3>
-                            <input type="text" id="p-code" placeholder="Code (e.g. SUMMER50)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-3 text-white uppercase outline-none focus:border-pink-400">
-                            <input type="number" id="p-disc" placeholder="Discount %" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-3 text-white outline-none focus:border-pink-400">
-                            <input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-4 text-white outline-none focus:border-pink-400">
-                            <button onclick="createPromo()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded-lg transition shadow-[0_0_15px_rgba(236,72,153,0.5)]">Create Code</button>
+                        <div class="md:col-span-1 glass p-8 rounded-3xl border-t-4 border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.3)]">
+                            <h3 class="text-xl font-black text-white mb-6 uppercase tracking-widest"><i class="fa-solid fa-plus mr-2 text-pink-400"></i>New Promo</h3>
+                            <input type="text" id="p-code" placeholder="Code (z.B. SUMMER50)" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-4 text-white uppercase outline-none focus:border-pink-400 transition shadow-inner font-bold">
+                            <input type="number" id="p-disc" placeholder="Discount %" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-4 text-white outline-none focus:border-pink-400 transition shadow-inner font-bold">
+                            <input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-6 text-white outline-none focus:border-pink-400 transition shadow-inner font-bold">
+                            <button onclick="createPromo()" class="w-full bg-gradient-to-r from-pink-700 to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_20px_rgba(236,72,153,0.6)] uppercase tracking-widest">Create Code</button>
                         </div>
-                        <div class="md:col-span-2 glass rounded-2xl overflow-hidden">
-                            <div class="p-6 border-b border-purple-500/30">
-                                <h3 class="text-lg font-bold text-white">Active Promos</h3>
+                        <div class="md:col-span-2 glass rounded-3xl overflow-hidden border border-pink-500/30 shadow-[0_0_30px_rgba(236,72,153,0.2)]">
+                            <div class="p-6 border-b border-pink-500/40 bg-black/40">
+                                <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-tags mr-3 text-pink-400"></i>Active Promos</h3>
                             </div>
-                            <table class="w-full text-left text-sm">
-                                <thead class="text-purple-300 border-b border-purple-500/30 bg-black/60">
-                                    <tr>
-                                        <th class="p-4">Code</th>
-                                        <th class="p-4">Discount</th>
-                                        <th class="p-4">Uses Left</th>
-                                        <th class="p-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-promos" class="divide-y divide-purple-500/20"></tbody>
-                            </table>
+                            <div class="p-2">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-pink-900/20 text-pink-200">
+                                        <tr>
+                                            <th class="p-4 font-black tracking-wider uppercase">Code</th>
+                                            <th class="p-4 font-black tracking-wider uppercase">Discount</th>
+                                            <th class="p-4 font-black tracking-wider uppercase">Uses Left</th>
+                                            <th class="p-4 text-right font-black tracking-wider uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-promos" class="divide-y divide-pink-500/20"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="lookup" class="tab-content">
-                    <div class="glass p-6 rounded-2xl mb-6 flex gap-4 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                        <input type="text" id="lookup-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition">
-                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]">
+                    <div class="glass p-8 rounded-3xl mb-8 flex gap-4 shadow-[0_0_30px_rgba(168,85,247,0.3)] border border-purple-500/40">
+                        <input type="text" id="lookup-id" placeholder="Discord User ID eingeben..." class="flex-1 bg-black/60 border-2 border-purple-500/50 rounded-xl px-5 py-4 text-white focus:border-purple-400 outline-none transition shadow-inner font-mono text-lg">
+                        <button onclick="lookupUser()" class="bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)] uppercase tracking-widest">
                             <i class="fa-solid fa-search mr-2"></i>Search
                         </button>
                     </div>
                     <div id="lookup-result" class="hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Spent</p>
-                                <h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 bg-black/40">
+                                <p class="text-purple-300 text-sm font-black uppercase tracking-widest">Total Spent</p>
+                                <h3 id="lu-spent" class="text-4xl font-black text-white glow-text mt-2">0.00€</h3>
                             </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Orders</p>
-                                <h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 bg-black/40">
+                                <p class="text-blue-300 text-sm font-black uppercase tracking-widest">Total Orders</p>
+                                <h3 id="lu-orders" class="text-4xl font-black text-white mt-2">0</h3>
                             </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500">
-                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p>
-                                <h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500 bg-black/40">
+                                <p class="text-red-300 text-sm font-black uppercase tracking-widest">Blacklist Status</p>
+                                <h3 id="lu-banned" class="text-2xl font-black mt-2">Clean</h3>
                             </div>
                         </div>
-                        <div class="glass rounded-2xl overflow-hidden">
-                            <div class="p-4 border-b border-purple-500/30 font-bold bg-black/60 text-white">Purchase History</div>
-                            <table class="w-full text-left text-sm">
-                                <thead class="text-purple-300 border-b border-purple-500/30">
-                                    <tr>
-                                        <th class="p-4">Invoice</th>
-                                        <th class="p-4">Product</th>
-                                        <th class="p-4">Price</th>
-                                        <th class="p-4">Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
-                            </table>
+                        <div class="glass rounded-3xl overflow-hidden border border-purple-500/30">
+                            <div class="p-6 border-b border-purple-500/40 bg-black/40">
+                                <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-3 text-purple-400"></i>Purchase History</h3>
+                            </div>
+                            <div class="p-2">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-purple-900/20 text-purple-200">
+                                        <tr>
+                                            <th class="p-4 font-black tracking-wider uppercase">Invoice</th>
+                                            <th class="p-4 font-black tracking-wider uppercase">Product</th>
+                                            <th class="p-4 font-black tracking-wider uppercase">Price</th>
+                                            <th class="p-4 font-black tracking-wider uppercase">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="announce" class="tab-content">
-                    <div class="glass p-6 rounded-2xl border-t-2 border-blue-500 max-w-3xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                        <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-satellite-dish mr-2 text-blue-400"></i>Server Broadcast</h3>
-                        <input type="text" id="ann-title" placeholder="Title (e.g. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white font-bold outline-none focus:border-blue-400 transition">
-                        <textarea id="ann-desc" placeholder="Message content..." rows="6" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white resize-none outline-none focus:border-blue-400 transition"></textarea>
-                        <input type="text" id="ann-img" placeholder="Image URL (Optional)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-6 text-white text-sm outline-none focus:border-blue-400 transition">
-                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.5)]">
-                            <i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord
+                    <div class="glass p-8 rounded-3xl border-t-4 border-blue-500 max-w-3xl mx-auto shadow-[0_0_40px_rgba(59,130,246,0.3)] mt-10">
+                        <h3 class="text-2xl font-black text-center text-white mb-8 uppercase tracking-widest"><i class="fa-solid fa-satellite-dish mr-3 text-blue-400"></i>Server Broadcast</h3>
+                        <input type="text" id="ann-title" placeholder="Titel (z.B. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white font-bold outline-none focus:border-blue-400 transition shadow-inner">
+                        <textarea id="ann-desc" placeholder="Nachricht hier eingeben..." rows="6" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white resize-none outline-none focus:border-blue-400 transition shadow-inner"></textarea>
+                        <input type="text" id="ann-img" placeholder="Bild URL (Optional)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-8 text-white text-sm outline-none focus:border-blue-400 transition shadow-inner">
+                        <button onclick="sendAnnounce()" class="w-full bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_25px_rgba(59,130,246,0.6)] uppercase tracking-widest text-lg">
+                            <i class="fa-solid fa-paper-plane mr-2"></i> Nachricht Senden
                         </button>
                     </div>
                 </div>
 
                 <div id="blacklist" class="tab-content">
-                    <div class="glass p-6 rounded-2xl mb-6 border-l-4 border-red-500 flex gap-4 items-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                        <input type="text" id="bl-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 text-white outline-none focus:border-red-400 transition">
-                        <input type="text" id="bl-reason" placeholder="Reason..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 text-white outline-none focus:border-red-400 transition">
-                        <button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 font-bold rounded-lg transition shadow-[0_0_15px_rgba(220,38,38,0.5)]">Ban</button>
+                    <div class="glass p-8 rounded-3xl mb-8 flex gap-4 shadow-[0_0_30px_rgba(239,68,68,0.3)] border border-red-500/40">
+                        <input type="text" id="bl-id" placeholder="Discord User ID bannen..." class="flex-1 bg-black/60 border-2 border-red-500/50 rounded-xl px-5 py-4 text-white outline-none focus:border-red-400 transition shadow-inner font-mono text-lg">
+                        <input type="text" id="bl-reason" placeholder="Grund (Optional)" class="flex-1 bg-black/60 border-2 border-red-500/50 rounded-xl px-5 py-4 text-white outline-none focus:border-red-400 transition shadow-inner text-lg">
+                        <button onclick="addBlacklist()" class="bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(220,38,38,0.6)] uppercase tracking-widest text-lg">BAN</button>
                     </div>
-                    <div class="glass rounded-2xl overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="text-red-300 border-b border-red-500/30 bg-black/60">
-                                <tr>
-                                    <th class="p-4">User ID</th>
-                                    <th class="p-4">Reason</th>
-                                    <th class="p-4 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-blacklist" class="divide-y divide-purple-500/20"></tbody>
-                        </table>
+                    <div class="glass rounded-3xl overflow-hidden border border-red-500/30">
+                        <div class="p-6 border-b border-red-500/40 bg-black/40">
+                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-skull mr-3 text-red-500"></i>Banned Users</h3>
+                        </div>
+                        <div class="p-2">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-red-900/20 text-red-200">
+                                    <tr>
+                                        <th class="p-4 font-black tracking-wider uppercase">User ID</th>
+                                        <th class="p-4 font-black tracking-wider uppercase">Reason</th>
+                                        <th class="p-4 text-right font-black tracking-wider uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-blacklist" class="divide-y divide-red-500/20"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
@@ -525,52 +561,51 @@ WEB_HTML = """
         </main>
     </div>
 
-    <div id="view-reseller" class="flex w-full h-full hidden-view p-8 synthwave-bg">
-        <div class="absolute inset-0 z-0 opacity-20"><div class="synthwave-grid"></div></div>
-        <div class="max-w-4xl mx-auto w-full relative z-10">
-            <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
+    <div id="view-reseller" class="flex w-full h-full hidden-view p-8">
+        <div class="max-w-5xl mx-auto w-full relative z-10">
+            <header class="flex justify-between items-center mb-10 glass p-6 rounded-3xl glow-box border border-purple-500/40">
                 <div class="flex items-center">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] object-contain">
+                    <img src="{WEBSITE_LOGO_URL}" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
                     <div>
-                        <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Reseller Portal</h1>
-                        <p class="text-sm text-purple-300 font-bold" id="r-name">Loading...</p>
+                        <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-widest uppercase">Reseller Portal</h1>
+                        <p class="text-purple-300 font-bold mt-1">Willkommen zurück, <span id="r-name" class="text-white font-black"></span></p>
                     </div>
                 </div>
-                <button onclick="logout()" class="bg-black/40 border border-red-500/50 hover:bg-red-600 text-red-400 hover:text-white px-6 py-2 rounded-lg transition font-bold shadow-[0_0_10px_rgba(220,38,38,0.3)]">
+                <button onclick="logout()" class="bg-black/60 border-2 border-red-500/50 hover:bg-red-600 text-red-400 hover:text-white px-8 py-3 rounded-xl transition font-black shadow-[0_0_20px_rgba(220,38,38,0.4)] tracking-widest uppercase">
                     <i class="fa-solid fa-power-off mr-2"></i>Logout
                 </button>
             </header>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
-                    <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access</h2>
-                    <div class="space-y-4">
-                        <button onclick="genKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="glass p-8 rounded-3xl border-t-4 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                    <h2 class="text-2xl font-black mb-8 text-white text-center uppercase tracking-widest"><i class="fa-solid fa-bolt mr-3 text-purple-400"></i>Generate Access</h2>
+                    <div class="space-y-5">
+                        <button onclick="genKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg">
+                            <span class="font-black text-lg tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i>
                         </button>
-                        <button onclick="genKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                        <button onclick="genKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg">
+                            <span class="font-black text-lg tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i>
                         </button>
-                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
-                            <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
+                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)]">
+                            <span class="font-black text-lg tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-xl text-yellow-300"></i>
                         </button>
                     </div>
                 </div>
-                <div class="glass p-6 rounded-2xl shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                    <h2 class="text-xl font-bold mb-4 text-white">Your Stock</h2>
-                    <div class="overflow-y-auto h-64 pr-2 space-y-3" id="my-keys"></div>
+                <div class="glass p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-purple-500/30">
+                    <h2 class="text-2xl font-black mb-6 text-white text-center uppercase tracking-widest"><i class="fa-solid fa-box-open mr-3 text-pink-400"></i>Your Stock</h2>
+                    <div class="overflow-y-auto h-[320px] pr-3 space-y-3" id="my-keys"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="key-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden-view z-50">
+    <div id="key-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden-view z-50 backdrop-blur-md">
         <div class="glass p-10 rounded-3xl text-center border-2 border-purple-500 shadow-[0_0_80px_rgba(168,85,247,0.6)] max-w-md w-full relative overflow-hidden">
             <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.2),transparent)]"></div>
-            <h3 class="text-3xl font-black text-white mb-2 glow-text relative z-10">ACCESS GRANTED</h3>
-            <p class="text-purple-300 mb-6 font-bold relative z-10">Key successfully generated.</p>
-            <input type="text" id="new-key" class="w-full bg-black border border-purple-500 p-4 rounded-xl text-purple-400 font-mono text-center mb-6 text-xl tracking-wider glow-box relative z-10 outline-none" readonly>
-            <button onclick="closeModal()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)] relative z-10 tracking-widest uppercase">Close</button>
+            <h3 class="text-4xl font-black text-white mb-2 glow-text relative z-10 tracking-widest">SUCCESS!</h3>
+            <p class="text-purple-300 mb-8 font-bold relative z-10 text-lg">Key generated & copied to DB.</p>
+            <input type="text" id="new-key" class="w-full bg-black/90 border-2 border-purple-500 p-5 rounded-2xl text-purple-400 font-mono text-center mb-8 text-xl tracking-widest glow-box relative z-10 outline-none" readonly>
+            <button onclick="closeModal()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-4 rounded-2xl transition shadow-[0_0_25px_rgba(147,51,234,0.7)] relative z-10 tracking-widest uppercase text-lg">Close</button>
         </div>
     </div>
 
@@ -582,9 +617,9 @@ WEB_HTML = """
             document.getElementById('form-register').classList.add('hidden-view');
             document.getElementById('form-customer').classList.add('hidden-view');
             
-            document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
-            document.getElementById('auth-tab-customer').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
-            document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
+            document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
+            document.getElementById('auth-tab-customer').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
+            document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
             
             document.getElementById('form-' + type).classList.remove('hidden-view');
             document.getElementById('auth-tab-' + type).className = "flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition";
@@ -604,7 +639,6 @@ WEB_HTML = """
                 return res;
             } catch (e) {
                 if (endpoint !== '/api/verify') {
-                    // Zeige das Overlay an, anstatt alles zu löschen
                     document.getElementById('reconnect-overlay').classList.remove('hidden-view');
                     setTimeout(checkAuthOnLoad, 2500);
                 }
@@ -614,7 +648,8 @@ WEB_HTML = """
 
         function showError(msg) { 
             const e = document.getElementById('auth-error'); 
-            e.innerText = msg; e.classList.remove('hidden'); 
+            e.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; 
+            e.classList.remove('hidden'); 
         }
 
         async function login() {
@@ -628,7 +663,7 @@ WEB_HTML = """
                     const d = await res.json(); 
                     localStorage.setItem('v_token', d.token); 
                     initApp(d.role, d.user); 
-                } else { showError("Falscher Username oder falsches Passwort!"); }
+                } else { showError("Falscher Username oder Passwort!"); }
             } catch (e) {}
         }
 
@@ -644,7 +679,7 @@ WEB_HTML = """
                     initApp(d.role, d.user); 
                 } else {
                     const e = await res.json();
-                    showError(e.error || "Key nicht gefunden oder ungültig."); 
+                    showError(e.error || "Key nicht gefunden."); 
                 }
             } catch (e) {}
         }
@@ -664,7 +699,12 @@ WEB_HTML = """
                     initApp(d.role, d.user); 
                 } else { 
                     const e = await res.json(); 
-                    showError(e.error || "Fehler bei der Registrierung!"); 
+                    // Genaue Erklärung für den User, was schief lief!
+                    if(e.error.includes("vergeben")) {
+                        showError(e.error + "<br><span class='text-gray-300 text-xs'>(Klick einfach auf LOGIN)</span>");
+                    } else {
+                        showError(e.error || "Fehler bei Registrierung!"); 
+                    }
                 }
             } catch (e) {}
         }
@@ -677,6 +717,9 @@ WEB_HTML = """
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
             if (t) {
+                document.getElementById('view-auth').classList.add('hidden-view');
+                document.getElementById('reconnect-overlay').classList.remove('hidden-view');
+                
                 try {
                     const res = await fetch('/api/verify', {
                         method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})
@@ -687,16 +730,9 @@ WEB_HTML = """
                         const d = await res.json(); 
                         initApp(d.role, d.user); 
                     } else if (res.status === 401) { logout(); } 
-                    else { 
-                        document.getElementById('reconnect-overlay').classList.remove('hidden-view');
-                        setTimeout(checkAuthOnLoad, 3000); 
-                    }
-                } catch(e) { 
-                    document.getElementById('reconnect-overlay').classList.remove('hidden-view');
-                    setTimeout(checkAuthOnLoad, 3000); 
-                }
+                    else { setTimeout(checkAuthOnLoad, 3000); }
+                } catch(e) { setTimeout(checkAuthOnLoad, 3000); }
             } else {
-                // Wenn kein Token da ist, zeige den Login Screen (Fix für den Black Screen beim ersten Laden)
                 document.getElementById('view-auth').classList.remove('hidden-view');
                 document.getElementById('reconnect-overlay').classList.add('hidden-view');
             }
@@ -727,12 +763,12 @@ WEB_HTML = """
             document.getElementById(tabId).classList.add('active');
             
             document.querySelectorAll('.nav-btn').forEach(el => { 
-                el.className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"; 
+                el.className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-purple-500/10 transition font-bold"; 
             });
-            document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/30 font-bold border border-purple-500/50 shadow-[inset_0_0_15px_rgba(168,85,247,0.3)]";
+            document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition";
             
             const titles = {
-                'dash': 'Overview', 'gen': 'Key Generator', 'keys': 'Keys & Logs', 'team': 'Team Management',
+                'dash': 'Overview', 'gen': 'Key Generator', 'keys': 'Keys Database', 'team': 'Team Management',
                 'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Broadcast', 'blacklist': 'Blacklist'
             };
             document.getElementById('page-title').innerText = titles[tabId];
@@ -767,7 +803,7 @@ WEB_HTML = """
                 
                 myChart = new Chart(ctx, {
                     type: 'line', 
-                    data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
+                    data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 4, fill: true, tension: 0.4 }] },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } }
                 });
             } catch(e) {}
@@ -777,9 +813,9 @@ WEB_HTML = """
             try {
                 const res = await apiCall('/api/activity', {}); const data = await res.json();
                 document.getElementById('activity-feed').innerHTML = data.map(a => `
-                    <div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition">
-                        <div><span class="font-black text-purple-400 text-sm mr-2">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div>
-                        <span class="text-xs text-gray-500 font-mono">${a.time.split('T')[1].substring(0,5)}</span>
+                    <div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition shadow-md">
+                        <div><span class="font-black text-purple-400 text-sm mr-2 uppercase tracking-wide">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div>
+                        <span class="text-xs text-gray-500 font-mono font-bold">${a.time.split('T')[1].substring(0,5)}</span>
                     </div>
                 `).join('');
             } catch(e) {}
@@ -788,17 +824,17 @@ WEB_HTML = """
         async function loadKeys() {
             try {
                 const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-gray-500 font-bold">No keys generated</td></tr>';
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No keys generated</td></tr>';
                 
                 tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
-                    let badge = info.used ? '<span class="px-3 py-1 rounded-md bg-red-500/20 text-red-400 text-xs border border-red-500/40 font-bold tracking-wider uppercase">Used</span>' : '<span class="px-3 py-1 rounded-md bg-green-500/20 text-green-400 text-xs border border-green-500/40 font-bold tracking-wider uppercase">Active</span>';
-                    if (info.revoked) badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-bold tracking-wider uppercase">Banned</span>';
+                    let badge = info.used ? '<span class="px-3 py-1 rounded-md bg-red-500/20 text-red-400 text-xs border border-red-500/40 font-black tracking-wider uppercase">Used</span>' : '<span class="px-3 py-1 rounded-md bg-green-500/20 text-green-400 text-xs border border-green-500/40 font-black tracking-wider uppercase shadow-[0_0_10px_rgba(74,222,128,0.2)]">Active</span>';
+                    if (info.revoked) badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-black tracking-wider uppercase">Banned</span>';
                     
-                    const creator = info.created_by ? `<span class="text-blue-400 font-bold">${info.created_by}</span>` : 'System';
+                    const creator = info.created_by ? `<span class="text-blue-400 font-black uppercase tracking-wider">${info.created_by}</span>` : 'System';
                     const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs font-bold">${info.used_by}</span>` : '-';
-                    const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs font-bold bg-black/50 text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white px-3 py-2 rounded-lg transition shadow-[0_0_10px_rgba(220,38,38,0.2)]">BAN KEY</button>` : '-';
+                    const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs font-black bg-black/60 text-red-400 border border-red-500/50 hover:bg-red-600 hover:text-white hover:border-red-600 px-4 py-2 rounded-lg transition shadow-[0_0_10px_rgba(220,38,38,0.3)] tracking-wider">BAN KEY</button>` : '-';
                     
-                    return `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="px-6 py-4 font-mono text-purple-300 font-bold tracking-wider">${key}</td><td class="px-6 py-4 text-gray-300 font-bold">${info.type}</td><td class="px-6 py-4">${creator}</td><td class="px-6 py-4">${usedBy}</td><td class="px-6 py-4">${badge}</td><td class="px-6 py-4 text-right">${act}</td></tr>`;
+                    return `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="px-6 py-5 font-mono text-purple-300 font-bold tracking-wider">${key}</td><td class="px-6 py-5 text-gray-200 font-black uppercase">${info.type}</td><td class="px-6 py-5">${creator}</td><td class="px-6 py-5">${usedBy}</td><td class="px-6 py-5">${badge}</td><td class="px-6 py-5 text-right">${act}</td></tr>`;
                 }).join('');
             } catch(e) {}
         }
@@ -806,15 +842,15 @@ WEB_HTML = """
         async function loadTeam() {
             try {
                 const res = await apiCall('/api/team', {}); const data = await res.json(); const tb = document.getElementById('table-team');
-                if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-gray-500 font-bold">No resellers active</td></tr>';
+                if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No resellers active</td></tr>';
                 
                 tb.innerHTML = data.map(u => `
-                    <tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10">
-                        <td class="px-6 py-4 font-bold text-blue-400">${u.username}</td>
-                        <td class="px-6 py-4 font-mono text-gray-400">${u.password}</td>
-                        <td class="px-6 py-4 font-black text-white">${u.keys_generated}</td>
-                        <td class="px-6 py-4 text-right">
-                            <button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button>
+                    <tr class="hover:bg-blue-500/20 transition border-b border-blue-500/10">
+                        <td class="px-6 py-5 font-black text-blue-400 tracking-wider uppercase">${u.username}</td>
+                        <td class="px-6 py-5 font-mono text-gray-400">${u.password}</td>
+                        <td class="px-6 py-5 font-black text-white text-lg">${u.keys_generated}</td>
+                        <td class="px-6 py-5 text-right">
+                            <button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition bg-black/50 p-3 rounded-lg border border-red-500/30 hover:bg-red-600 hover:text-white shadow-lg"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `).join('');
@@ -837,8 +873,8 @@ WEB_HTML = """
         async function loadPromos() {
             try {
                 const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No active promos.</td></tr>';
-                tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono font-black text-pink-400 tracking-wider">${code}</td><td class="p-4 text-purple-300 font-bold">-${info.discount}%</td><td class="p-4 text-gray-300 font-bold">${info.uses}</td><td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">No active promos.</td></tr>';
+                tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-pink-500/20 transition border-b border-pink-500/10"><td class="p-5 font-mono font-black text-pink-400 tracking-widest text-lg">${code}</td><td class="p-5 text-white font-black text-lg">-${info.discount}%</td><td class="p-5 text-gray-300 font-bold">${info.uses}</td><td class="p-5 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 bg-black/60 border border-red-500/40 p-3 rounded-lg hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
             } catch(e) {}
         }
 
@@ -859,11 +895,11 @@ WEB_HTML = """
                 document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; 
                 document.getElementById('lu-orders').innerText = data.total_orders;
                 const b = document.getElementById('lu-banned');
-                if (data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-black text-red-500 mt-2 glow-text"; } 
-                else { b.innerText = "Clean"; b.className = "text-xl font-bold text-green-400 mt-2"; }
+                if (data.is_banned) { b.innerText = "BANNED"; b.className = "text-2xl font-black text-red-500 mt-2 glow-text tracking-wider"; } 
+                else { b.innerText = "CLEAN"; b.className = "text-2xl font-black text-green-400 mt-2 tracking-wider"; }
                 const tb = document.getElementById('lu-table');
-                if (data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No purchases found.</td></tr>';
-                else tb.innerHTML = data.invoices.map(i => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono text-xs text-gray-400 font-bold tracking-wider">${i.id}</td><td class="p-4 text-purple-300 font-bold">${i.product}</td><td class="p-4 font-black text-green-400">${i.price}€</td><td class="p-4 text-xs text-gray-400 font-bold">${i.date.split('T')[0]}</td></tr>`).join('');
+                if (data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">No purchases found.</td></tr>';
+                else tb.innerHTML = data.invoices.map(i => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-5 font-mono text-xs text-gray-400 font-bold tracking-wider">${i.id}</td><td class="p-5 text-white font-black uppercase tracking-wider">${i.product}</td><td class="p-5 font-black text-green-400 text-lg">${i.price}€</td><td class="p-5 text-sm text-gray-400 font-bold">${i.date.split('T')[0]}</td></tr>`).join('');
             } catch(e) {}
         }
 
@@ -877,8 +913,8 @@ WEB_HTML = """
         async function loadBlacklist() {
             try {
                 const res = await apiCall('/api/blacklist', {}); const data = await res.json(); const tb = document.getElementById('table-blacklist');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-gray-500 font-bold">Blacklist is empty.</td></tr>';
-                tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-red-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono text-red-300 font-bold tracking-wider">${uid}</td><td class="p-4 text-gray-300 font-bold">${info.reason}</td><td class="p-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">Blacklist is empty.</td></tr>';
+                tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-red-500/20 transition border-b border-red-500/10"><td class="p-5 font-mono text-red-300 font-bold tracking-wider text-lg">${uid}</td><td class="p-5 text-white font-bold">${info.reason}</td><td class="p-5 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400 bg-black/60 border border-red-500/40 p-3 rounded-lg hover:bg-red-600 hover:text-white transition shadow-[0_0_15px_rgba(220,38,38,0.5)]"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
             } catch(e) {}
         }
 
@@ -894,8 +930,13 @@ WEB_HTML = """
         async function loadResellerKeys() {
             try {
                 const res = await apiCall('/api/reseller/data', {}); const data = await res.json();
-                if (data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-6 text-center font-bold">Noch keine Keys generiert.</p>';
-                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `<div class="bg-black/60 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center transition hover:border-purple-500/70 shadow-lg mb-3"><span class="font-mono text-sm text-purple-300 font-bold tracking-wider">${k.key}</span><span class="text-xs font-black px-3 py-1 bg-purple-500/20 text-purple-300 rounded-md border border-purple-500/40 uppercase">${k.type}</span></div>`).join('');
+                if (data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-8 text-center font-black tracking-widest uppercase">Noch keine Keys generiert.</p>';
+                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `
+                    <div class="bg-black/70 p-5 rounded-2xl border-2 border-purple-500/40 flex justify-between items-center transition hover:border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] mb-4">
+                        <span class="font-mono text-md text-purple-300 font-bold tracking-widest">${k.key}</span>
+                        <span class="text-sm font-black px-4 py-2 bg-purple-600/30 text-white rounded-xl border border-purple-500/50 uppercase tracking-widest shadow-inner">${k.type}</span>
+                    </div>
+                `).join('');
             } catch(e) {}
         }
 
@@ -918,8 +959,8 @@ WEB_HTML = """
                 document.getElementById('cust-discord').innerText = data.used_by;
                 document.getElementById('cust-created').innerText = data.created_at.split('T')[0];
                 
-                if(data.status === "Banned") document.getElementById('cust-status').className = "text-xl font-black text-red-500";
-                else if(data.status === "Active") document.getElementById('cust-status').className = "text-xl font-black text-green-400";
+                if(data.status === "Banned") document.getElementById('cust-status').className = "text-2xl font-black text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] mt-1 tracking-wider uppercase";
+                else if(data.status === "Active") document.getElementById('cust-status').className = "text-2xl font-black text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)] mt-1 tracking-wider uppercase";
             } catch(e){}
         }
 
@@ -1009,7 +1050,6 @@ async def api_customer_data(request):
     key = user_info["user"]
     kdata = keys_db.get(key, {})
     
-    # Sicherstellen, dass das Produkt existiert (Fallback für alte Keys)
     ptype = kdata.get("type", "day_1")
     prod = PRODUCTS.get(ptype, {"label": "Unknown"})
     
@@ -1563,7 +1603,8 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     keys_db[key].update({"used": True, "used_by": str(member.id)})
     save_json(KEYS_FILE, keys_db)
     
-    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + PRODUCTS[pt]["duration"]).isoformat() if PRODUCTS[pt]["duration"] else None}
+    dur_days = PRODUCTS[pt].get("duration_days", 0)
+    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + timedelta(days=dur_days)).isoformat() if dur_days > 0 else None}
     save_json(REDEEMED_FILE, redeemed_db)
     
     await member.add_roles(r)
@@ -1961,6 +2002,7 @@ class MainTicketPanelView(discord.ui.View):
 
         await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
+
 class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
     key_input = discord.ui.TextInput(label="Key", required=True)
     
@@ -2006,6 +2048,19 @@ async def on_member_join(member):
 # =========================================================
 # SLASH COMMANDS
 # =========================================================
+
+# NEUER BEFEHL: Notfall Reset, falls ein Test-User die DB blockiert
+@bot.tree.command(name="reset_users", description="(ADMIN) Löscht alle Website-Nutzer, falls du von vorne testen willst")
+@app_commands.guilds(discord.Object(id=GUILD_ID))
+async def reset_users(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator: 
+        return await interaction.response.send_message("Admins only.", ephemeral=True)
+    
+    global users_db
+    users_db = {}
+    save_json(USERS_FILE, users_db)
+    await interaction.response.send_message("✅ Website Datenbank gelöscht. Du kannst den 'reseller' Account jetzt neu registrieren!", ephemeral=True)
+
 @bot.tree.command(name="gen_admin_key", description="Generiert einen ADMIN-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def gen_admin_key(interaction: discord.Interaction):
@@ -2031,6 +2086,7 @@ async def gen_admin_key(interaction: discord.Interaction):
         await ch.send(embed=embed)
         
     await interaction.response.send_message(f"Admin Invite Key generiert: `{new_key}`", ephemeral=True)
+
 
 @bot.tree.command(name="gen_reseller_key", description="Generiert einen RESELLER-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
@@ -2058,6 +2114,7 @@ async def gen_reseller_key(interaction: discord.Interaction, user: discord.Membe
         
     await interaction.response.send_message(f"Reseller Invite Key generiert: `{new_key}`", ephemeral=True)
 
+
 @bot.tree.command(name="ticket", description="Open the Gen ticket panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def ticket(interaction: discord.Interaction):
@@ -2069,11 +2126,13 @@ async def ticket(interaction: discord.Interaction):
     embed.set_image(url=PANEL_IMAGE_URL)
     await interaction.response.send_message(embed=embed, view=MainTicketPanelView())
 
+
 @bot.tree.command(name="send_redeem_panel", description="Send the redeem panel")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_redeem_panel(interaction: discord.Interaction):
     embed = discord.Embed(title="🎟️ VALE GEN REDEEM CENTER", description="Click to redeem your key.", color=COLOR_MAIN)
     await interaction.response.send_message(embed=embed, view=RedeemPanelView())
+
 
 @bot.tree.command(name="vouch", description="Hinterlasse eine Bewertung für deinen Kauf!")
 @app_commands.describe(sterne="Wie viele Sterne gibst du?", produkt="Was hast du gekauft?", bewertung="Deine Erfahrung")
@@ -2093,6 +2152,7 @@ async def vouch(interaction: discord.Interaction, sterne: app_commands.Choice[in
         await ch.send(embed=embed)
     await interaction.response.send_message("✅ Danke für deine Bewertung!", ephemeral=True)
 
+
 @bot.tree.command(name="send_rules", description="Postet das Regelwerk")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
 async def send_rules(interaction: discord.Interaction):
@@ -2107,6 +2167,7 @@ async def send_rules(interaction: discord.Interaction):
     embed.set_image(url=WELCOME_BANNER_URL)
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("Regelwerk gepostet!", ephemeral=True)
+
 
 @bot.tree.command(name="test_welcome", description="Testet die Welcome-Nachricht")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
