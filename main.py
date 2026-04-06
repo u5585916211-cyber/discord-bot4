@@ -37,7 +37,7 @@ ADMIN_PANEL_CHANNEL_ID = 1490335327619911873
 WELCOME_CHANNEL_ID = 1490374553183060090
 RULES_CHANNEL_ID = 1490376004391272498
 VOUCH_CHANNEL_ID = 1490372381791748176
-ANNOUNCEMENT_CHANNEL_ID = 1490329714022289562
+ANNOUNCEMENT_CHANNEL_ID = 1490329714022289562 
 WEB_KEY_CHANNEL_ID = 1490476535843393679
 
 REDEEM_ROLE_ID = 1490321899266506913
@@ -45,7 +45,7 @@ RESELLER_ROLE_ID = 1490335130890534923
 
 SERVER_NAME = "Vale Generator"
 # ⚠️ TRAGE HIER DEN DISCORD-BILD-LINK VON DEINEM LILA LOGO EIN FÜR DIE WEBSITE!
-WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548"
+WEBSITE_LOGO_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png?ex=69d3cfcd&is=69d27e4d&hm=a1683879f331ba73307cf9ad0e27cac43f02b2de553abd4e8f9e86dcadec0a48&=&format=webp&quality=lossless&width=548&height=548" 
 
 WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371158242099351/analyst_klein.png"
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
@@ -208,7 +208,21 @@ WEB_HTML = """
                 <div id="keys" class="tab-content">
                     <div class="glass rounded-2xl overflow-hidden">
                         <div class="p-6 border-b border-purple-500/20"><h3 class="text-lg font-bold text-white"><i class="fa-solid fa-key mr-2 text-purple-400"></i>Generated Keys</h3></div>
-                        <div class="overflow-x-auto max-h-[600px]"><table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-black/40 border-b border-purple-500/20 sticky top-0"><tr><th class="px-6 py-4 text-purple-300">Key</th><th class="px-6 py-4 text-purple-300">Type</th><th class="px-6 py-4 text-purple-300">Creator</th><th class="px-6 py-4 text-purple-300">Status</th></tr></thead><tbody id="table-keys" class="divide-y divide-purple-500/10"></tbody></table></div>
+                        <div class="overflow-x-auto max-h-[600px]">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-black/40 border-b border-purple-500/20 sticky top-0">
+                                    <tr>
+                                        <th class="px-6 py-4 text-purple-300">Key</th>
+                                        <th class="px-6 py-4 text-purple-300">Type</th>
+                                        <th class="px-6 py-4 text-purple-300">Creator</th>
+                                        <th class="px-6 py-4 text-purple-300">Used By (ID)</th>
+                                        <th class="px-6 py-4 text-purple-300">Status</th>
+                                        <th class="px-6 py-4 text-right text-purple-300">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-keys" class="divide-y divide-purple-500/10"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -378,13 +392,20 @@ WEB_HTML = """
         }
         async function loadKeys() {
             const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
-            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
+            if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No keys generated</td></tr>';
             tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
-                const badge = info.used ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>' : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs border border-green-500/20">Active</span>';
+                let badge = info.used ? '<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs border border-red-500/20">Used</span>' : '<span class="px-2 py-1 rounded bg-green-500/10 text-green-400 text-xs border border-green-500/20">Active</span>';
+                if(info.revoked) badge = '<span class="px-2 py-1 rounded bg-gray-500/10 text-gray-400 text-xs border border-gray-500/20">Banned</span>';
+                
                 const creator = info.created_by ? `<span class="text-blue-400 font-bold">${info.created_by}</span>` : 'System';
-                return `<tr class="hover:bg-purple-500/10"><td class="px-6 py-4 font-mono text-purple-300">${key}</td><td class="px-6 py-4 text-gray-300">${info.type}</td><td class="px-6 py-4">${creator}</td><td class="px-6 py-4">${badge}</td></tr>`;
+                const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs">${info.used_by}</span>` : '-';
+                const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-2 py-1 rounded transition shadow-lg">Ban Key</button>` : '-';
+                
+                return `<tr class="hover:bg-purple-500/10"><td class="px-6 py-4 font-mono text-purple-300">${key}</td><td class="px-6 py-4 text-gray-300">${info.type}</td><td class="px-6 py-4">${creator}</td><td class="px-6 py-4">${usedBy}</td><td class="px-6 py-4">${badge}</td><td class="px-6 py-4 text-right">${act}</td></tr>`;
             }).join('');
         }
+        async function revokeKey(k) { if(confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')){ await apiCall('/api/keys/revoke', {key:k}); loadKeys(); } }
+
         async function loadPromos() {
             const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos');
             if(Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active promos.</td></tr>';
@@ -480,8 +501,7 @@ async def api_verify(request):
     return web.Response(status=401)
 
 async def api_stats(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    u = get_user_from_token(request); if not u or u["role"] != "admin": return web.Response(status=401)
     now = now_utc(); today_buyers = set(); total_rev = 0.0
     days = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
     labels = [d.strftime("%a") for d in days]; rev_data = {d: 0.0 for d in days}
@@ -495,82 +515,75 @@ async def api_stats(request):
     active_k = sum(1 for k, v in keys_db.items() if not v["used"])
     return web.json_response({"total_revenue": total_rev, "buyers_today": len(today_buyers), "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())})
 
-async def api_activity(request): 
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(activity_db) 
+async def api_activity(request): u=get_user_from_token(request); return web.json_response(activity_db) if u and u["role"]=="admin" else web.Response(status=401)
+async def api_keys(request): u=get_user_from_token(request); return web.json_response(keys_db) if u and u["role"]=="admin" else web.Response(status=401)
 
-async def api_keys(request): 
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(keys_db) 
-
-async def api_promos(request): 
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(promos_db) 
-
-async def api_add_promo(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json(); promos_db[d["code"]] = {"discount": d["discount"], "uses": d["uses"]}; save_json(PROMOS_FILE, promos_db)
-    log_activity(f"Created Promo {d['code']}", u["user"]); return web.json_response({"ok": True})
-
-async def api_rm_promo(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json(); c = d["code"] 
-    if c in promos_db: del promos_db[c]; save_json(PROMOS_FILE, promos_db)
+async def api_revoke_key(request):
+    u = get_user_from_token(request); if not u or u["role"] != "admin": return web.Response(status=401)
+    k = (await request.json()).get("key")
+    if k in keys_db:
+        if keys_db[k].get("used") and keys_db[k].get("used_by"):
+            uid = str(keys_db[k]["used_by"])
+            g = bot.get_guild(GUILD_ID)
+            if g:
+                m = g.get_member(int(uid)); r = g.get_role(REDEEM_ROLE_ID)
+                if m and r:
+                    try: await m.remove_roles(r, reason="Key banned")
+                    except: pass
+            if uid in redeemed_db: del redeemed_db[uid]; save_json(REDEEMED_FILE, redeemed_db)
+        keys_db[k]["revoked"] = True; keys_db[k]["used"] = True; save_json(KEYS_FILE, keys_db); log_activity(f"Banned Key {k}", u["user"])
     return web.json_response({"ok": True})
 
+async def api_promos(request): u=get_user_from_token(request); return web.json_response(promos_db) if u and u["role"]=="admin" else web.Response(status=401)
+
+async def api_add_promo(request):
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
+    d=await request.json(); promos_db[d["code"]]={"discount":d["discount"],"uses":d["uses"]}; save_json(PROMOS_FILE, promos_db)
+    log_activity(f"Created Promo {d['code']}", u["user"]); return web.json_response({"ok":True})
+
+async def api_rm_promo(request):
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
+    d=await request.json(); c=d["code"]; 
+    if c in promos_db: del promos_db[c]; save_json(PROMOS_FILE, promos_db)
+    return web.json_response({"ok":True})
+
 async def api_lookup(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
     target = (await request.json()).get("user_id"); spent = 0.0; invs = []
     for i_id, data in invoices_db.items():
         if data["buyer_id"] == target:
             spent += float(data.get("final_price_eur", 0))
-            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label", "Unk"), "price": data.get("final_price_eur", 0), "date": data["created_at"]})
+            invs.append({"id": i_id, "product": PRODUCTS.get(data["product_type"], {}).get("label","Unk"), "price": data.get("final_price_eur",0), "date": data["created_at"]})
     return web.json_response({"total_spent": spent, "total_orders": len(invs), "is_banned": target in blacklist_db, "invoices": invs[::-1]})
 
 async def api_announce(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json(); ch = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
+    d=await request.json(); ch=bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
     if ch:
         emb = discord.Embed(title=d["title"], description=d["desc"], color=COLOR_MAIN)
         if d.get("img"): emb.set_image(url=d["img"])
         await ch.send(embed=emb); log_activity("Sent Discord Broadcast", u["user"])
-    return web.json_response({"ok": True})
+    return web.json_response({"ok":True})
 
-async def api_blacklist(request): 
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    return web.json_response(blacklist_db) 
-
+async def api_blacklist(request): u=get_user_from_token(request); return web.json_response(blacklist_db) if u and u["role"]=="admin" else web.Response(status=401)
 async def api_add_blacklist(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    d = await request.json(); uid = d.get("user_id"); rsn = d.get("reason", "Web Ban")
-    if uid: blacklist_db[uid] = {"reason": rsn, "added_by": u["user"], "added_at": iso_now()}; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Banned {uid}", u["user"])
-    return web.json_response({"ok": True})
-
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
+    d=await request.json(); uid=d.get("user_id"); rsn=d.get("reason","Web Ban")
+    if uid: blacklist_db[uid]={"reason":rsn,"added_by":u["user"],"added_at":iso_now()}; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Banned {uid}", u["user"])
+    return web.json_response({"ok":True})
 async def api_rm_blacklist(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "admin": return web.Response(status=401)
-    uid = (await request.json()).get("user_id")
+    u=get_user_from_token(request); if not u or u["role"]!="admin": return web.Response(status=401)
+    uid=(await request.json()).get("user_id")
     if uid in blacklist_db: del blacklist_db[uid]; save_json(BLACKLIST_FILE, blacklist_db); log_activity(f"Unbanned {uid}", u["user"])
-    return web.json_response({"ok": True})
+    return web.json_response({"ok":True})
 
 async def api_reseller_data(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "reseller": return web.Response(status=401)
-    my_keys = [{"key": k, "type": PRODUCTS.get(v["type"], {}).get("label", "Unk")} for k, v in keys_db.items() if v.get("created_by") == u["user"]]
+    u=get_user_from_token(request); if not u or u["role"]!="reseller": return web.Response(status=401)
+    my_keys = [{"key": k, "type": PRODUCTS.get(v["type"],{}).get("label","Unk")} for k, v in keys_db.items() if v.get("created_by") == u["user"]]
     return web.json_response({"my_keys": my_keys})
 
 async def api_reseller_gen(request):
-    u = get_user_from_token(request)
-    if not u or u["role"] != "reseller": return web.Response(status=401)
+    u=get_user_from_token(request); if not u or u["role"]!="reseller": return web.Response(status=401)
     ptype = (await request.json()).get("t", "day_1"); prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     keys_db[new_key] = {"type": ptype, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "created_by": u["user"]}
@@ -582,7 +595,8 @@ async def start_web_server():
     app.router.add_get('/', handle_index)
     app.router.add_post('/api/login', api_login); app.router.add_post('/api/register', api_register); app.router.add_post('/api/verify', api_verify)
     
-    app.router.add_post('/api/stats', api_stats); app.router.add_post('/api/activity', api_activity); app.router.add_post('/api/keys', api_keys)
+    app.router.add_post('/api/stats', api_stats); app.router.add_post('/api/activity', api_activity); 
+    app.router.add_post('/api/keys', api_keys); app.router.add_post('/api/keys/revoke', api_revoke_key)
     app.router.add_post('/api/promos', api_promos); app.router.add_post('/api/promos/add', api_add_promo); app.router.add_post('/api/promos/remove', api_rm_promo)
     app.router.add_post('/api/lookup', api_lookup); app.router.add_post('/api/announce', api_announce)
     app.router.add_post('/api/blacklist', api_blacklist); app.router.add_post('/api/blacklist/add', api_add_blacklist); app.router.add_post('/api/blacklist/remove', api_rm_blacklist)
@@ -703,6 +717,7 @@ async def send_summary_and_admin_panels(channel: discord.TextChannel, owner_id: 
 async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key: str):
     if is_blacklisted(member.id): return False, "You are blacklisted."
     if key not in keys_db: return False, "Key not found."
+    if keys_db[key].get("revoked"): return False, "This key has been banned."
     if keys_db[key]["used"]: return False, "Already used."
     pt = keys_db[key]["type"]; r = guild.get_role(REDEEM_ROLE_ID)
     if not r: return False, "Role not found."
