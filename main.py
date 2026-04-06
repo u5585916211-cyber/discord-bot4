@@ -55,9 +55,6 @@ WELCOME_THUMBNAIL_URL = "https://media.discordapp.net/attachments/14903330423282
 WELCOME_BANNER_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg"
 PANEL_IMAGE_URL = "https://media.discordapp.net/attachments/1490333042328211648/1490371157432467577/analyst.jpg?ex=69d4788d&is=69d3270d&hm=68f7da51ae2a3eb59d3bbfb8242799a0da4d5f47c0cf1c250d6d2e4cea7a7ebc&=&format=webp&width=548&height=548"
 
-# 🔥 NEU: Der krass leuchtende lila Neon-Strand Hintergrund für die Website
-WEBSITE_BACKGROUND_URL = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
-
 # Zahlungsdaten
 PAYPAL_EMAIL = "hydrasupfivem@gmail.com"
 LITECOIN_ADDRESS = "ltc1qn39l4h59x4s0hr90pn3p4qflhhm5ahe6x9u6jg"
@@ -180,7 +177,7 @@ bot = ValeBot()
 # =========================================================
 # 🌍 WEB DASHBOARD HTML
 # =========================================================
-WEB_HTML = f"""
+WEB_HTML = """
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
@@ -191,50 +188,36 @@ WEB_HTML = f"""
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body {{ 
-            font-family: 'Inter', sans-serif; 
-            background-color: #050505; 
-            color: #e5e7eb; 
-            margin: 0;
-            background-image: url('{WEBSITE_BACKGROUND_URL}');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }}
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; }
         
-        /* Dark Overlay über dem Strand-Hintergrund für bessere Lesbarkeit */
-        .bg-overlay {{
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 0, 20, 0.6);
-            z-index: -1;
-            backdrop-filter: blur(3px);
-        }}
+        /* PURES NEON 3D GITTER (Kein Bild!) */
+        .synthwave-bg { background: linear-gradient(to bottom, #090014, #2a0845, #140024); }
+        .synthwave-grid {
+            position: absolute; bottom: 0; left: -50%; width: 200%; height: 40%;
+            background-image: linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px), linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
+            background-size: 60px 60px; transform: perspective(600px) rotateX(60deg);
+            animation: gridMove 2s linear infinite; z-index: 0;
+        }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
 
-        .glass {{ background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }}
-        .glow-text {{ text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }}
-        .glow-box {{ box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }}
-        .hidden-view {{ display: none !important; }}
-        .tab-content {{ display: none; }} 
-        .tab-content.active {{ display: block; animation: fadeIn 0.3s ease; }}
-        @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-        ::-webkit-scrollbar {{ width: 6px; }} ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.5); }} ::-webkit-scrollbar-thumb {{ background: #9333ea; border-radius: 4px; }}
+        .glass { background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }
+        .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }
+        .glow-box { box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }
+        .hidden-view { display: none !important; }
+        .tab-content { display: none; } 
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
 
-    <div class="bg-overlay"></div>
-
-    <div id="reconnect-overlay" class="fixed inset-0 bg-[#050505] bg-opacity-95 z-[999] flex flex-col items-center justify-center hidden-view backdrop-blur-md">
-        <i class="fa-solid fa-satellite-dish animate-pulse text-purple-500 text-6xl mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]"></i>
-        <h2 class="text-3xl font-black text-white tracking-widest glow-text">RECONNECTING</h2>
-        <p class="text-gray-400 mt-3 font-bold">Verbindung zum Server wird wiederhergestellt...</p>
-    </div>
-
-    <div id="view-auth" class="flex w-full h-full items-center justify-center relative">
+    <div id="view-auth" class="flex w-full h-full items-center justify-center relative synthwave-bg">
+        <div class="synthwave-grid"></div>
+        
         <div class="glass p-10 rounded-3xl max-w-md w-full relative z-10 glow-box border-2 border-purple-500/50">
             <div class="text-center mb-8">
-                <img src="{WEBSITE_LOGO_URL}" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
+                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
                 <h1 class="text-3xl font-black text-white tracking-widest glow-text mt-4">VALE GEN</h1>
             </div>
 
@@ -260,18 +243,19 @@ WEB_HTML = f"""
                 <input type="text" id="r-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Username">
                 <input type="password" id="r-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Password">
                 <input type="text" id="r-key" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-400 outline-none transition shadow-inner" placeholder="Invitation Key (VALE-...)">
-                <button onclick="register()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">CREATE ACCOUNT</button>
+                <button onclick="register()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">CREATE ACCOUNT</button>
             </div>
             
             <p id="auth-error" class="text-red-400 mt-4 text-sm text-center font-bold hidden"></p>
         </div>
     </div>
 
-    <div id="view-customer" class="flex w-full h-full hidden-view p-8">
+    <div id="view-customer" class="flex w-full h-full hidden-view synthwave-bg p-8">
+        <div class="synthwave-grid"></div>
         <div class="max-w-3xl mx-auto w-full relative z-10">
             <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
                 <div class="flex items-center">
-                    <img src="{WEBSITE_LOGO_URL}" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
                     <div>
                         <h1 class="text-2xl font-black text-white">Customer Portal</h1>
                         <p class="text-sm text-pink-400 font-mono font-bold" id="cust-key-display">GEN-...</p>
@@ -303,38 +287,23 @@ WEB_HTML = f"""
         </div>
     </div>
 
-    <div id="view-admin" class="flex w-full h-full hidden-view">
+    <div id="view-admin" class="flex w-full h-full hidden-view synthwave-bg">
+        <div class="synthwave-grid"></div>
         <aside class="w-64 glass border-r border-purple-500/40 flex flex-col justify-between z-20 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
             <div>
                 <div class="h-32 flex items-center justify-center border-b border-purple-500/40 px-4 bg-black/20">
-                    <img src="{WEBSITE_LOGO_URL}" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
                     <span class="text-2xl font-black text-white glow-text">ADMIN</span>
                 </div>
                 <nav class="p-4 space-y-3 mt-4">
-                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition">
-                        <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
-                    </button>
-                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-bolt w-6 text-yellow-400"></i> Generator
-                    </button>
-                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-key w-6 text-purple-400"></i> Key Manager
-                    </button>
-                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-users w-6 text-blue-400"></i> Team
-                    </button>
-                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-tags w-6 text-pink-400"></i> Promos
-                    </button>
-                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-search w-6 text-green-400"></i> Database
-                    </button>
-                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-satellite-dish w-6 text-orange-400"></i> Broadcast
-                    </button>
-                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold">
-                        <i class="fa-solid fa-skull w-6 text-red-500"></i> Blacklist
-                    </button>
+                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
+                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-bolt w-6 text-yellow-400"></i> Generator</button>
+                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-key w-6 text-purple-400"></i> Key Manager</button>
+                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-users w-6 text-blue-400"></i> Team</button>
+                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-tags w-6 text-pink-400"></i> Promos</button>
+                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-search w-6 text-green-400"></i> Database</button>
+                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-satellite-dish w-6 text-orange-400"></i> Broadcast</button>
+                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-skull w-6 text-red-500"></i> Blacklist</button>
                 </nav>
             </div>
             <div class="p-6 border-t border-purple-500/40 text-center bg-black/20">
@@ -361,28 +330,13 @@ WEB_HTML = f"""
 
                 <div id="dash" class="tab-content active">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
-                            <h3 class="text-5xl font-black text-white mt-2 glow-text" id="stat-rev">0.00€</h3>
-                        </div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500 shadow-[0_0_25px_rgba(236,72,153,0.3)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Orders Today</p>
-                            <h3 class="text-5xl font-black text-white mt-2" id="stat-orders">0</h3>
-                        </div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]">
-                            <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Active Keys</p>
-                            <h3 class="text-5xl font-black text-white mt-2" id="stat-keys">0</h3>
-                        </div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p><h3 class="text-5xl font-black text-white mt-2 glow-text" id="stat-rev">0.00€</h3></div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500 shadow-[0_0_25px_rgba(236,72,153,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Orders Today</p><h3 class="text-5xl font-black text-white mt-2" id="stat-orders">0</h3></div>
+                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Active Keys</p><h3 class="text-5xl font-black text-white mt-2" id="stat-keys">0</h3></div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="lg:col-span-2 glass p-6 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3>
-                            <canvas id="revenueChart" height="100"></canvas>
-                        </div>
-                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                            <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3>
-                            <div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
-                        </div>
+                        <div class="lg:col-span-2 glass p-6 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3><canvas id="revenueChart" height="100"></canvas></div>
+                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.5)]"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3><div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div></div>
                     </div>
                 </div>
                 
@@ -405,20 +359,11 @@ WEB_HTML = f"""
 
                 <div id="keys" class="tab-content">
                     <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.2)] border border-purple-500/30">
-                        <div class="p-6 border-b border-purple-500/40 bg-black/40">
-                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-key mr-3 text-purple-400"></i>Key Database</h3>
-                        </div>
+                        <div class="p-6 border-b border-purple-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-key mr-3 text-purple-400"></i>Key Database</h3></div>
                         <div class="overflow-x-auto max-h-[600px] p-2">
                             <table class="w-full text-left text-sm whitespace-nowrap">
                                 <thead class="bg-purple-900/20 text-purple-200 sticky top-0 backdrop-blur-xl z-10">
-                                    <tr>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Key</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Type</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Creator</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Used By (ID)</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Status</th>
-                                        <th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th>
-                                    </tr>
+                                    <tr><th class="px-6 py-4 font-black tracking-wider uppercase">Key</th><th class="px-6 py-4 font-black tracking-wider uppercase">Type</th><th class="px-6 py-4 font-black tracking-wider uppercase">Creator</th><th class="px-6 py-4 font-black tracking-wider uppercase">Used By (ID)</th><th class="px-6 py-4 font-black tracking-wider uppercase">Status</th><th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th></tr>
                                 </thead>
                                 <tbody id="table-keys" class="divide-y divide-purple-500/20"></tbody>
                             </table>
@@ -428,18 +373,11 @@ WEB_HTML = f"""
 
                 <div id="team" class="tab-content">
                     <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.2)] border border-blue-500/30">
-                        <div class="p-6 border-b border-blue-500/40 bg-black/40">
-                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-users mr-3 text-blue-400"></i>Reseller Management</h3>
-                        </div>
+                        <div class="p-6 border-b border-blue-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-users mr-3 text-blue-400"></i>Reseller Management</h3></div>
                         <div class="p-2">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-blue-900/20 text-blue-200">
-                                    <tr>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Username</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Password</th>
-                                        <th class="px-6 py-4 font-black tracking-wider uppercase">Generated Keys</th>
-                                        <th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th>
-                                    </tr>
+                                    <tr><th class="px-6 py-4 font-black tracking-wider uppercase">Username</th><th class="px-6 py-4 font-black tracking-wider uppercase">Password</th><th class="px-6 py-4 font-black tracking-wider uppercase">Generated Keys</th><th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th></tr>
                                 </thead>
                                 <tbody id="table-team" class="divide-y divide-blue-500/20"></tbody>
                             </table>
@@ -457,18 +395,11 @@ WEB_HTML = f"""
                             <button onclick="createPromo()" class="w-full bg-gradient-to-r from-pink-700 to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_20px_rgba(236,72,153,0.6)] uppercase tracking-widest">Create Code</button>
                         </div>
                         <div class="md:col-span-2 glass rounded-3xl overflow-hidden border border-pink-500/30 shadow-[0_0_30px_rgba(236,72,153,0.2)]">
-                            <div class="p-6 border-b border-pink-500/40 bg-black/40">
-                                <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-tags mr-3 text-pink-400"></i>Active Promos</h3>
-                            </div>
+                            <div class="p-6 border-b border-pink-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-tags mr-3 text-pink-400"></i>Active Promos</h3></div>
                             <div class="p-2">
                                 <table class="w-full text-left text-sm">
                                     <thead class="bg-pink-900/20 text-pink-200">
-                                        <tr>
-                                            <th class="p-4 font-black tracking-wider uppercase">Code</th>
-                                            <th class="p-4 font-black tracking-wider uppercase">Discount</th>
-                                            <th class="p-4 font-black tracking-wider uppercase">Uses Left</th>
-                                            <th class="p-4 text-right font-black tracking-wider uppercase">Action</th>
-                                        </tr>
+                                        <tr><th class="p-4 font-black tracking-wider uppercase">Code</th><th class="p-4 font-black tracking-wider uppercase">Discount</th><th class="p-4 font-black tracking-wider uppercase">Uses Left</th><th class="p-4 text-right font-black tracking-wider uppercase">Action</th></tr>
                                     </thead>
                                     <tbody id="table-promos" class="divide-y divide-pink-500/20"></tbody>
                                 </table>
@@ -480,38 +411,20 @@ WEB_HTML = f"""
                 <div id="lookup" class="tab-content">
                     <div class="glass p-8 rounded-3xl mb-8 flex gap-4 shadow-[0_0_30px_rgba(168,85,247,0.3)] border border-purple-500/40">
                         <input type="text" id="lookup-id" placeholder="Discord User ID eingeben..." class="flex-1 bg-black/60 border-2 border-purple-500/50 rounded-xl px-5 py-4 text-white focus:border-purple-400 outline-none transition shadow-inner font-mono text-lg">
-                        <button onclick="lookupUser()" class="bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)] uppercase tracking-widest">
-                            <i class="fa-solid fa-search mr-2"></i>Search
-                        </button>
+                        <button onclick="lookupUser()" class="bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)] uppercase tracking-widest"><i class="fa-solid fa-search mr-2"></i>Search</button>
                     </div>
                     <div id="lookup-result" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 bg-black/40">
-                                <p class="text-purple-300 text-sm font-black uppercase tracking-widest">Total Spent</p>
-                                <h3 id="lu-spent" class="text-4xl font-black text-white glow-text mt-2">0.00€</h3>
-                            </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 bg-black/40">
-                                <p class="text-blue-300 text-sm font-black uppercase tracking-widest">Total Orders</p>
-                                <h3 id="lu-orders" class="text-4xl font-black text-white mt-2">0</h3>
-                            </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500 bg-black/40">
-                                <p class="text-red-300 text-sm font-black uppercase tracking-widest">Blacklist Status</p>
-                                <h3 id="lu-banned" class="text-2xl font-black mt-2">Clean</h3>
-                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 bg-black/40"><p class="text-purple-300 text-sm font-black uppercase tracking-widest">Total Spent</p><h3 id="lu-spent" class="text-4xl font-black text-white glow-text mt-2">0.00€</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 bg-black/40"><p class="text-blue-300 text-sm font-black uppercase tracking-widest">Total Orders</p><h3 id="lu-orders" class="text-4xl font-black text-white mt-2">0</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500 bg-black/40"><p class="text-red-300 text-sm font-black uppercase tracking-widest">Blacklist Status</p><h3 id="lu-banned" class="text-2xl font-black mt-2">Clean</h3></div>
                         </div>
                         <div class="glass rounded-3xl overflow-hidden border border-purple-500/30">
-                            <div class="p-6 border-b border-purple-500/40 bg-black/40">
-                                <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-3 text-purple-400"></i>Purchase History</h3>
-                            </div>
+                            <div class="p-6 border-b border-purple-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-3 text-purple-400"></i>Purchase History</h3></div>
                             <div class="p-2">
                                 <table class="w-full text-left text-sm">
                                     <thead class="bg-purple-900/20 text-purple-200">
-                                        <tr>
-                                            <th class="p-4 font-black tracking-wider uppercase">Invoice</th>
-                                            <th class="p-4 font-black tracking-wider uppercase">Product</th>
-                                            <th class="p-4 font-black tracking-wider uppercase">Price</th>
-                                            <th class="p-4 font-black tracking-wider uppercase">Date</th>
-                                        </tr>
+                                        <tr><th class="p-4 font-black tracking-wider uppercase">Invoice</th><th class="p-4 font-black tracking-wider uppercase">Product</th><th class="p-4 font-black tracking-wider uppercase">Price</th><th class="p-4 font-black tracking-wider uppercase">Date</th></tr>
                                     </thead>
                                     <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
                                 </table>
@@ -526,9 +439,7 @@ WEB_HTML = f"""
                         <input type="text" id="ann-title" placeholder="Titel (z.B. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white font-bold outline-none focus:border-blue-400 transition shadow-inner">
                         <textarea id="ann-desc" placeholder="Nachricht hier eingeben..." rows="6" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white resize-none outline-none focus:border-blue-400 transition shadow-inner"></textarea>
                         <input type="text" id="ann-img" placeholder="Bild URL (Optional)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-8 text-white text-sm outline-none focus:border-blue-400 transition shadow-inner">
-                        <button onclick="sendAnnounce()" class="w-full bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_25px_rgba(59,130,246,0.6)] uppercase tracking-widest text-lg">
-                            <i class="fa-solid fa-paper-plane mr-2"></i> Nachricht Senden
-                        </button>
+                        <button onclick="sendAnnounce()" class="w-full bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_25px_rgba(59,130,246,0.6)] uppercase tracking-widest text-lg"><i class="fa-solid fa-paper-plane mr-2"></i> Nachricht Senden</button>
                     </div>
                 </div>
 
@@ -539,17 +450,11 @@ WEB_HTML = f"""
                         <button onclick="addBlacklist()" class="bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(220,38,38,0.6)] uppercase tracking-widest text-lg">BAN</button>
                     </div>
                     <div class="glass rounded-3xl overflow-hidden border border-red-500/30">
-                        <div class="p-6 border-b border-red-500/40 bg-black/40">
-                            <h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-skull mr-3 text-red-500"></i>Banned Users</h3>
-                        </div>
+                        <div class="p-6 border-b border-red-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-skull mr-3 text-red-500"></i>Banned Users</h3></div>
                         <div class="p-2">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-red-900/20 text-red-200">
-                                    <tr>
-                                        <th class="p-4 font-black tracking-wider uppercase">User ID</th>
-                                        <th class="p-4 font-black tracking-wider uppercase">Reason</th>
-                                        <th class="p-4 text-right font-black tracking-wider uppercase">Action</th>
-                                    </tr>
+                                    <tr><th class="p-4 font-black tracking-wider uppercase">User ID</th><th class="p-4 font-black tracking-wider uppercase">Reason</th><th class="p-4 text-right font-black tracking-wider uppercase">Action</th></tr>
                                 </thead>
                                 <tbody id="table-blacklist" class="divide-y divide-red-500/20"></tbody>
                             </table>
@@ -561,34 +466,27 @@ WEB_HTML = f"""
         </main>
     </div>
 
-    <div id="view-reseller" class="flex w-full h-full hidden-view p-8">
+    <div id="view-reseller" class="flex w-full h-full hidden-view p-8 synthwave-bg">
+        <div class="synthwave-grid"></div>
         <div class="max-w-5xl mx-auto w-full relative z-10">
             <header class="flex justify-between items-center mb-10 glass p-6 rounded-3xl glow-box border border-purple-500/40">
                 <div class="flex items-center">
-                    <img src="{WEBSITE_LOGO_URL}" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
                     <div>
                         <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-widest uppercase">Reseller Portal</h1>
                         <p class="text-purple-300 font-bold mt-1">Willkommen zurück, <span id="r-name" class="text-white font-black"></span></p>
                     </div>
                 </div>
-                <button onclick="logout()" class="bg-black/60 border-2 border-red-500/50 hover:bg-red-600 text-red-400 hover:text-white px-8 py-3 rounded-xl transition font-black shadow-[0_0_20px_rgba(220,38,38,0.4)] tracking-widest uppercase">
-                    <i class="fa-solid fa-power-off mr-2"></i>Logout
-                </button>
+                <button onclick="logout()" class="bg-black/60 border-2 border-red-500/50 hover:bg-red-600 text-red-400 hover:text-white px-8 py-3 rounded-xl transition font-black shadow-[0_0_20px_rgba(220,38,38,0.4)] tracking-widest uppercase"><i class="fa-solid fa-power-off mr-2"></i>Logout</button>
             </header>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div class="glass p-8 rounded-3xl border-t-4 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
                     <h2 class="text-2xl font-black mb-8 text-white text-center uppercase tracking-widest"><i class="fa-solid fa-bolt mr-3 text-purple-400"></i>Generate Access</h2>
                     <div class="space-y-5">
-                        <button onclick="genKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-black text-lg tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i>
-                        </button>
-                        <button onclick="genKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-black text-lg tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i>
-                        </button>
-                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)]">
-                            <span class="font-black text-lg tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-xl text-yellow-300"></i>
-                        </button>
+                        <button onclick="genKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg"><span class="font-black text-lg tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i></button>
+                        <button onclick="genKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg"><span class="font-black text-lg tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i></button>
+                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)]"><span class="font-black text-lg tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-xl text-yellow-300"></i></button>
                     </div>
                 </div>
                 <div class="glass p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-purple-500/30">
@@ -638,10 +536,6 @@ WEB_HTML = f"""
                 }
                 return res;
             } catch (e) {
-                if (endpoint !== '/api/verify') {
-                    document.getElementById('reconnect-overlay').classList.remove('hidden-view');
-                    setTimeout(checkAuthOnLoad, 2500);
-                }
                 throw e;
             }
         }
@@ -699,9 +593,8 @@ WEB_HTML = f"""
                     initApp(d.role, d.user); 
                 } else { 
                     const e = await res.json(); 
-                    // Genaue Erklärung für den User, was schief lief!
                     if(e.error.includes("vergeben")) {
-                        showError(e.error + "<br><span class='text-gray-300 text-xs'>(Klick einfach auf LOGIN)</span>");
+                        showError(e.error + "<br><span class='text-gray-300 text-xs'>(Benutze in Discord /reset_web um die Datenbank zu löschen)</span>");
                     } else {
                         showError(e.error || "Fehler bei Registrierung!"); 
                     }
@@ -717,16 +610,12 @@ WEB_HTML = f"""
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
             if (t) {
-                document.getElementById('view-auth').classList.add('hidden-view');
-                document.getElementById('reconnect-overlay').classList.remove('hidden-view');
-                
                 try {
                     const res = await fetch('/api/verify', {
                         method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})
                     });
                     
                     if (res.ok) { 
-                        document.getElementById('reconnect-overlay').classList.add('hidden-view');
                         const d = await res.json(); 
                         initApp(d.role, d.user); 
                     } else if (res.status === 401) { logout(); } 
@@ -734,13 +623,11 @@ WEB_HTML = f"""
                 } catch(e) { setTimeout(checkAuthOnLoad, 3000); }
             } else {
                 document.getElementById('view-auth').classList.remove('hidden-view');
-                document.getElementById('reconnect-overlay').classList.add('hidden-view');
             }
         }
 
         function initApp(role, name) {
             document.getElementById('view-auth').classList.add('hidden-view');
-            document.getElementById('reconnect-overlay').classList.add('hidden-view');
             if (role === 'admin') { 
                 document.getElementById('view-admin').classList.remove('hidden-view'); 
                 document.getElementById('admin-name').innerText = name; 
@@ -793,31 +680,20 @@ WEB_HTML = f"""
             try {
                 const res = await apiCall('/api/stats', {}); 
                 const data = await res.json();
-                
                 document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€'; 
                 document.getElementById('stat-orders').innerText = data.buyers_today; 
                 document.getElementById('stat-keys').innerText = data.active_keys;
                 
                 const ctx = document.getElementById('revenueChart').getContext('2d');
                 if (myChart) myChart.destroy();
-                
-                myChart = new Chart(ctx, {
-                    type: 'line', 
-                    data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 4, fill: true, tension: 0.4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } }
-                });
+                myChart = new Chart(ctx, { type: 'line', data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 4, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } } });
             } catch(e) {}
         }
 
         async function loadActivity() {
             try {
                 const res = await apiCall('/api/activity', {}); const data = await res.json();
-                document.getElementById('activity-feed').innerHTML = data.map(a => `
-                    <div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition shadow-md">
-                        <div><span class="font-black text-purple-400 text-sm mr-2 uppercase tracking-wide">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div>
-                        <span class="text-xs text-gray-500 font-mono font-bold">${a.time.split('T')[1].substring(0,5)}</span>
-                    </div>
-                `).join('');
+                document.getElementById('activity-feed').innerHTML = data.map(a => `<div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition shadow-md"><div><span class="font-black text-purple-400 text-sm mr-2 uppercase tracking-wide">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div><span class="text-xs text-gray-500 font-mono font-bold">${a.time.split('T')[1].substring(0,5)}</span></div>`).join('');
             } catch(e) {}
         }
 
@@ -825,15 +701,12 @@ WEB_HTML = f"""
             try {
                 const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
                 if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No keys generated</td></tr>';
-                
                 tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
                     let badge = info.used ? '<span class="px-3 py-1 rounded-md bg-red-500/20 text-red-400 text-xs border border-red-500/40 font-black tracking-wider uppercase">Used</span>' : '<span class="px-3 py-1 rounded-md bg-green-500/20 text-green-400 text-xs border border-green-500/40 font-black tracking-wider uppercase shadow-[0_0_10px_rgba(74,222,128,0.2)]">Active</span>';
                     if (info.revoked) badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-black tracking-wider uppercase">Banned</span>';
-                    
                     const creator = info.created_by ? `<span class="text-blue-400 font-black uppercase tracking-wider">${info.created_by}</span>` : 'System';
                     const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs font-bold">${info.used_by}</span>` : '-';
                     const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs font-black bg-black/60 text-red-400 border border-red-500/50 hover:bg-red-600 hover:text-white hover:border-red-600 px-4 py-2 rounded-lg transition shadow-[0_0_10px_rgba(220,38,38,0.3)] tracking-wider">BAN KEY</button>` : '-';
-                    
                     return `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="px-6 py-5 font-mono text-purple-300 font-bold tracking-wider">${key}</td><td class="px-6 py-5 text-gray-200 font-black uppercase">${info.type}</td><td class="px-6 py-5">${creator}</td><td class="px-6 py-5">${usedBy}</td><td class="px-6 py-5">${badge}</td><td class="px-6 py-5 text-right">${act}</td></tr>`;
                 }).join('');
             } catch(e) {}
@@ -843,31 +716,16 @@ WEB_HTML = f"""
             try {
                 const res = await apiCall('/api/team', {}); const data = await res.json(); const tb = document.getElementById('table-team');
                 if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No resellers active</td></tr>';
-                
-                tb.innerHTML = data.map(u => `
-                    <tr class="hover:bg-blue-500/20 transition border-b border-blue-500/10">
-                        <td class="px-6 py-5 font-black text-blue-400 tracking-wider uppercase">${u.username}</td>
-                        <td class="px-6 py-5 font-mono text-gray-400">${u.password}</td>
-                        <td class="px-6 py-5 font-black text-white text-lg">${u.keys_generated}</td>
-                        <td class="px-6 py-5 text-right">
-                            <button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition bg-black/50 p-3 rounded-lg border border-red-500/30 hover:bg-red-600 hover:text-white shadow-lg"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
+                tb.innerHTML = data.map(u => `<tr class="hover:bg-blue-500/20 transition border-b border-blue-500/10"><td class="px-6 py-5 font-black text-blue-400 tracking-wider uppercase">${u.username}</td><td class="px-6 py-5 font-mono text-gray-400">${u.password}</td><td class="px-6 py-5 font-black text-white text-lg">${u.keys_generated}</td><td class="px-6 py-5 text-right"><button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition bg-black/50 p-3 rounded-lg border border-red-500/30 hover:bg-red-600 hover:text-white shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
             } catch(e){}
         }
 
         async function deleteReseller(username) {
-            if(confirm(`Willst du den Reseller ${username} wirklich löschen?`)) {
-                await apiCall('/api/team/delete', {username: username});
-                loadTeam();
-            }
+            if(confirm(`Willst du den Reseller ${username} wirklich löschen?`)) { await apiCall('/api/team/delete', {username: username}); loadTeam(); }
         }
 
         async function revokeKey(k) { 
-            if (confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')) { 
-                await apiCall('/api/keys/revoke', {key: k}); loadKeys(); 
-            } 
+            if (confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')) { await apiCall('/api/keys/revoke', {key: k}); loadKeys(); } 
         }
 
         async function loadPromos() {
@@ -926,17 +784,11 @@ WEB_HTML = f"""
 
         async function rmBlacklist(uid) { await apiCall('/api/blacklist/remove', {user_id: uid}); loadBlacklist(); }
 
-        // RESELLER & ADMIN GENERATOR FUNCTIONS
         async function loadResellerKeys() {
             try {
                 const res = await apiCall('/api/reseller/data', {}); const data = await res.json();
                 if (data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-8 text-center font-black tracking-widest uppercase">Noch keine Keys generiert.</p>';
-                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `
-                    <div class="bg-black/70 p-5 rounded-2xl border-2 border-purple-500/40 flex justify-between items-center transition hover:border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] mb-4">
-                        <span class="font-mono text-md text-purple-300 font-bold tracking-widest">${k.key}</span>
-                        <span class="text-sm font-black px-4 py-2 bg-purple-600/30 text-white rounded-xl border border-purple-500/50 uppercase tracking-widest shadow-inner">${k.type}</span>
-                    </div>
-                `).join('');
+                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `<div class="bg-black/70 p-5 rounded-2xl border-2 border-purple-500/40 flex justify-between items-center transition hover:border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] mb-4"><span class="font-mono text-md text-purple-300 font-bold tracking-widest">${k.key}</span><span class="text-sm font-black px-4 py-2 bg-purple-600/30 text-white rounded-xl border border-purple-500/50 uppercase tracking-widest shadow-inner">${k.type}</span></div>`).join('');
             } catch(e) {}
         }
 
@@ -970,7 +822,7 @@ WEB_HTML = f"""
     </script>
 </body>
 </html>
-""".replace("LOGO_URL_PLACEHOLDER", WEBSITE_LOGO_URL)
+"""
 
 # =========================================================
 # 🌍 API ENDPOINTS (WEB SERVER)
@@ -1357,7 +1209,6 @@ async def api_admin_gen(request):
     
     return web.json_response({"key": new_key})
 
-
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_index)
@@ -1611,6 +1462,7 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     return True, pt
 
 # --- VIEWS & MODALS ---
+
 class CloseConfirmView(discord.ui.View):
     def __init__(self): 
         super().__init__(timeout=60)
@@ -2049,17 +1901,21 @@ async def on_member_join(member):
 # SLASH COMMANDS
 # =========================================================
 
-# NEUER BEFEHL: Notfall Reset, falls ein Test-User die DB blockiert
-@bot.tree.command(name="reset_users", description="(ADMIN) Löscht alle Website-Nutzer, falls du von vorne testen willst")
+@bot.tree.command(name="reset_web", description="(ADMIN) Setzt alle Web-Accounts und Web-Keys zurück!")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
-async def reset_users(interaction: discord.Interaction):
+async def reset_web(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: 
         return await interaction.response.send_message("Admins only.", ephemeral=True)
     
-    global users_db
+    global users_db, webkeys_db, web_sessions
     users_db = {}
+    webkeys_db = {}
+    web_sessions = {}
     save_json(USERS_FILE, users_db)
-    await interaction.response.send_message("✅ Website Datenbank gelöscht. Du kannst den 'reseller' Account jetzt neu registrieren!", ephemeral=True)
+    save_json(WEBKEYS_FILE, webkeys_db)
+    save_json(SESSIONS_FILE, web_sessions)
+    
+    await interaction.response.send_message("✅ Website Datenbank (User & Keys) gelöscht. Du kannst jetzt komplett frisch neue Keys generieren und dich registrieren!", ephemeral=True)
 
 @bot.tree.command(name="gen_admin_key", description="Generiert einen ADMIN-Einladungs-Key für die Website")
 @app_commands.guilds(discord.Object(id=GUILD_ID))
