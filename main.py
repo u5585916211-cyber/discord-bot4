@@ -62,7 +62,6 @@ ETHEREUM_ADDRESS = "0x6Ba2afdA7e61817f9c27f98ffAfe9051F9ad8167"
 SOLANA_ADDRESS = "DnzXgySsPnSdEKsMJub21dBjM6bcT2jtic73VeutN3p4"
 
 LTC_MIN_CONFIRMATIONS = 1
-EXPIRY_REMINDER_HOURS = 12
 
 # Farben für Discord Embeds
 COLOR_MAIN = 0x9333EA
@@ -82,8 +81,6 @@ COLOR_WELCOME = 0xDD0000
 KEYS_FILE = "keys.json"
 REDEEMED_FILE = "redeemed.json"
 USED_TXIDS_FILE = "used_txids.json"
-USED_PAYSAFE_FILE = "used_paysafecodes.json"
-USED_AMAZON_FILE = "used_amazoncodes.json"
 BLACKLIST_FILE = "blacklist.json"
 INVOICES_FILE = "invoices.json"
 PROMOS_FILE = "promos.json"
@@ -92,11 +89,12 @@ WEBKEYS_FILE = "web_keys.json"
 USERS_FILE = "web_users.json"
 TICKETS_FILE = "tickets.json"
 SESSIONS_FILE = "sessions.json"
+PRODUCTS_FILE = "products.json" # NEU: Dynamische Produkte
 
-PRODUCTS = {
-    "day_1": {"label": "1 Day", "price_eur": 5, "duration": timedelta(days=1), "key_prefix": "GEN-1D"},
-    "week_1": {"label": "1 Week", "price_eur": 15, "duration": timedelta(weeks=1), "key_prefix": "GEN-1W"},
-    "lifetime": {"label": "Lifetime", "price_eur": 30, "duration": None, "key_prefix": "GEN-LT"}
+DEFAULT_PRODUCTS = {
+    "day_1": {"label": "1 Day", "price_eur": 5, "duration_days": 1, "key_prefix": "GEN-1D"},
+    "week_1": {"label": "1 Week", "price_eur": 15, "duration_days": 7, "key_prefix": "GEN-1W"},
+    "lifetime": {"label": "Lifetime", "price_eur": 30, "duration_days": 0, "key_prefix": "GEN-LT"}
 }
 
 PAYMENTS = {
@@ -108,9 +106,6 @@ PAYMENTS = {
     "amazoncard": {"label": "Amazon Card", "emoji": "🎁"}
 }
 
-# =========================================================
-# UTILS & DB FUNCTIONS
-# =========================================================
 def load_json(path, default):
     if not os.path.exists(path):
         with open(path, "w", encoding="utf-8") as f:
@@ -129,8 +124,6 @@ ticket_data = load_json(TICKETS_FILE, {})
 keys_db = load_json(KEYS_FILE, {})
 redeemed_db = load_json(REDEEMED_FILE, {})
 used_txids_db = load_json(USED_TXIDS_FILE, {})
-used_paysafe_db = load_json(USED_PAYSAFE_FILE, {})
-used_amazon_db = load_json(USED_AMAZON_FILE, {})
 blacklist_db = load_json(BLACKLIST_FILE, {})
 invoices_db = load_json(INVOICES_FILE, {})
 promos_db = load_json(PROMOS_FILE, {})
@@ -138,6 +131,7 @@ activity_db = load_json(ACTIVITY_FILE, [])
 webkeys_db = load_json(WEBKEYS_FILE, {})
 users_db = load_json(USERS_FILE, {})
 web_sessions = load_json(SESSIONS_FILE, {})
+products_db = load_json(PRODUCTS_FILE, DEFAULT_PRODUCTS)
 
 def log_activity(action, user="System"):
     global activity_db
@@ -172,18 +166,18 @@ class ValeBot(commands.Bot):
         self.add_view(MainTicketPanelView())
         self.add_view(RedeemPanelView())
         self.add_view(PaymentSummaryView())
-        self.add_view(TicketManageView(owner_id=0))
-        self.add_view(BuySetupView(owner_id=0))
+        self.add_view(TicketManageView())
+        self.add_view(BuySetupView())
         self.add_view(ProductSelectView())
         self.add_view(PaymentSelectView())
-        self.add_view(PaymentActionView(owner_id=0))
-        self.add_view(ReviewView(target_channel_id=0, buyer_id=0))
-        self.add_view(AdminPanelView(owner_id=0, ticket_channel_id=0))
+        self.add_view(PaymentActionView())
+        self.add_view(ReviewView())
+        self.add_view(AdminPanelView())
 
 bot = ValeBot()
 
 # =========================================================
-# 🌍 WEB DASHBOARD HTML (NEUES NEON 3D DESIGN)
+# 🌍 WEB DASHBOARD HTML
 # =========================================================
 WEB_HTML = """
 <!DOCTYPE html>
@@ -198,41 +192,19 @@ WEB_HTML = """
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; }
         
-        /* KRASSES LILA NEON SYNTHWAVE DESIGN */
-        .synthwave-bg {
-            background: linear-gradient(to bottom, #090014, #2a0845, #140024);
-        }
+        .synthwave-bg { background: linear-gradient(to bottom, #090014, #2a0845, #140024); }
         .synthwave-sun {
-            position: absolute;
-            bottom: 30%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 400px;
-            height: 400px;
-            background: linear-gradient(to bottom, #f9a8d4, #9333ea);
-            border-radius: 50%;
-            box-shadow: 0 0 80px #a855f7;
-            z-index: 1;
-            opacity: 0.8;
+            position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);
+            width: 400px; height: 400px; background: linear-gradient(to bottom, #f9a8d4, #9333ea);
+            border-radius: 50%; box-shadow: 0 0 80px #a855f7; z-index: 1; opacity: 0.8;
         }
         .synthwave-grid {
-            position: absolute;
-            bottom: 0;
-            left: -50%;
-            width: 200%;
-            height: 40%;
-            background-image: 
-                linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
-            background-size: 60px 60px;
-            transform: perspective(600px) rotateX(60deg);
-            animation: gridMove 2s linear infinite;
-            z-index: 2;
+            position: absolute; bottom: 0; left: -50%; width: 200%; height: 40%;
+            background-image: linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px), linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
+            background-size: 60px 60px; transform: perspective(600px) rotateX(60deg);
+            animation: gridMove 2s linear infinite; z-index: 2;
         }
-        @keyframes gridMove {
-            0% { background-position: 0 0; }
-            100% { background-position: 0 60px; }
-        }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
 
         .glass { background: rgba(10, 5, 20, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(168, 85, 247, 0.3); }
         .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9); }
@@ -253,8 +225,7 @@ WEB_HTML = """
     </div>
 
     <div id="view-auth" class="flex w-full h-full items-center justify-center relative synthwave-bg">
-        <div class="synthwave-sun"></div>
-        <div class="synthwave-grid"></div>
+        <div class="synthwave-sun"></div><div class="synthwave-grid"></div>
         
         <div class="glass p-10 rounded-3xl max-w-md w-full relative z-10 glow-box">
             <div class="text-center mb-8">
@@ -264,6 +235,7 @@ WEB_HTML = """
 
             <div class="flex border-b border-purple-500/30 mb-6">
                 <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">LOGIN</button>
+                <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent">CUSTOMER</button>
                 <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent">REGISTER</button>
             </div>
 
@@ -271,6 +243,12 @@ WEB_HTML = """
                 <input type="text" id="l-user" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Username">
                 <input type="password" id="l-pass" class="w-full bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition" placeholder="Password">
                 <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.6)]">LOGIN</button>
+            </div>
+
+            <div id="form-customer" class="space-y-4 hidden-view">
+                <p class="text-xs text-gray-400 text-center font-bold mb-2">Log in with your purchased Key</p>
+                <input type="text" id="c-key" class="w-full bg-black/60 border border-pink-500/50 rounded-xl px-4 py-3 text-pink-400 font-mono focus:border-pink-400 outline-none transition tracking-wider text-center" placeholder="GEN-...">
+                <button onclick="customerLogin()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_15px_rgba(236,72,153,0.6)]">ACCESS DASHBOARD</button>
             </div>
 
             <div id="form-register" class="space-y-4 hidden-view">
@@ -284,6 +262,43 @@ WEB_HTML = """
         </div>
     </div>
 
+    <div id="view-customer" class="flex w-full h-full hidden-view synthwave-bg p-8">
+        <div class="absolute inset-0 z-0 opacity-20"><div class="synthwave-grid"></div></div>
+        <div class="max-w-3xl mx-auto w-full relative z-10">
+            <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
+                <div class="flex items-center">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)] object-contain">
+                    <div>
+                        <h1 class="text-2xl font-black text-white">Customer Portal</h1>
+                        <p class="text-sm text-pink-400 font-mono" id="cust-key-display">GEN-...</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="bg-red-500/10 hover:bg-red-600 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-white px-4 py-2 rounded-lg transition font-bold shadow-[0_0_10px_rgba(220,38,38,0.3)]">
+                    <i class="fa-solid fa-power-off mr-2"></i>Logout
+                </button>
+            </header>
+            
+            <div class="glass p-8 rounded-3xl shadow-[0_0_30px_rgba(236,72,153,0.2)] text-center">
+                <h2 class="text-gray-400 font-bold uppercase tracking-widest mb-2">Your Product</h2>
+                <h3 class="text-4xl font-black text-white glow-text mb-8" id="cust-prod">Loading...</h3>
+                
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div class="bg-black/50 p-6 rounded-2xl border border-pink-500/30">
+                        <i class="fa-solid fa-shield-halved text-3xl text-pink-400 mb-3"></i>
+                        <p class="text-sm text-gray-400 font-bold">Status</p>
+                        <p class="text-xl font-black text-white" id="cust-status">Loading</p>
+                    </div>
+                    <div class="bg-black/50 p-6 rounded-2xl border border-purple-500/30">
+                        <i class="fa-brands fa-discord text-3xl text-purple-400 mb-3"></i>
+                        <p class="text-sm text-gray-400 font-bold">Bound To (Discord ID)</p>
+                        <p class="text-xl font-mono text-white" id="cust-discord">None</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500">Created: <span id="cust-created"></span></p>
+            </div>
+        </div>
+    </div>
+
     <div id="view-admin" class="flex w-full h-full hidden-view synthwave-bg">
         <div class="absolute inset-0 z-0 opacity-20"><div class="synthwave-grid"></div></div>
         <aside class="w-64 glass border-r border-purple-500/30 flex flex-col justify-between z-10 relative">
@@ -293,33 +308,18 @@ WEB_HTML = """
                     <span class="text-xl font-black text-white glow-text">ADMIN</span>
                 </div>
                 <nav class="p-4 space-y-2 mt-2">
-                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/30 font-bold border border-purple-500/50 transition">
-                        <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
-                    </button>
-                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-bolt w-6"></i> Generator
-                    </button>
-                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-key w-6"></i> Key Manager
-                    </button>
-                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-tags w-6"></i> Promos
-                    </button>
-                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-search w-6"></i> Database
-                    </button>
-                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-satellite-dish w-6"></i> Broadcast
-                    </button>
-                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-                        <i class="fa-solid fa-skull w-6"></i> Blacklist
-                    </button>
+                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/30 font-bold border border-purple-500/50 transition"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
+                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-bolt w-6"></i> Generator</button>
+                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-key w-6"></i> Key Manager</button>
+                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-users w-6"></i> Team</button>
+                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-tags w-6"></i> Promos</button>
+                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-search w-6"></i> Database</button>
+                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-satellite-dish w-6"></i> Broadcast</button>
+                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"><i class="fa-solid fa-skull w-6"></i> Blacklist</button>
                 </nav>
             </div>
             <div class="p-6 border-t border-purple-500/30 text-center">
-                <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold transition bg-black/40 px-6 py-2 rounded-xl border border-red-500/30 shadow-[0_0_10px_rgba(220,38,38,0.3)]">
-                    <i class="fa-solid fa-power-off mr-1"></i> LOGOUT
-                </button>
+                <button onclick="logout()" class="text-red-400 hover:text-red-300 font-bold transition bg-black/40 px-6 py-2 rounded-xl border border-red-500/30 shadow-[0_0_10px_rgba(220,38,38,0.3)]"><i class="fa-solid fa-power-off mr-1"></i> LOGOUT</button>
             </div>
         </aside>
 
@@ -327,11 +327,14 @@ WEB_HTML = """
             <div class="max-w-7xl mx-auto">
                 <header class="flex justify-between items-center mb-8 glass p-4 rounded-2xl">
                     <h2 id="page-title" class="text-3xl font-black text-white tracking-wide uppercase">Dashboard</h2>
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm text-gray-300">Logged in as <span id="admin-name" class="text-purple-400 font-bold">Admin</span></span>
-                        <span class="bg-purple-500/20 text-purple-400 border border-purple-500/50 text-xs font-bold px-3 py-1 rounded-full flex items-center shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse mr-2"></span> LIVE
-                        </span>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-blue-500/30">
+                            <i class="fa-brands fa-discord text-blue-400"></i> <span id="dc-members" class="text-white font-bold text-sm">0</span>
+                        </div>
+                        <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-yellow-500/30">
+                            <i class="fa-solid fa-ticket text-yellow-400"></i> <span id="dc-tickets" class="text-white font-bold text-sm">0</span>
+                        </div>
+                        <span class="text-sm text-gray-300 ml-2">Admin <span id="admin-name" class="text-purple-400 font-bold"></span></span>
                     </div>
                 </header>
 
@@ -365,17 +368,8 @@ WEB_HTML = """
                 <div id="gen" class="tab-content">
                     <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 max-w-2xl shadow-[0_0_20px_rgba(168,85,247,0.3)]">
                         <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access Keys (Admin)</h2>
-                        <div class="space-y-4">
-                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                                <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                            </button>
-                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                                <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                            </button>
-                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
-                                <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
-                            </button>
-                        </div>
+                        <div class="space-y-4" id="admin-gen-buttons">
+                            </div>
                     </div>
                 </div>
 
@@ -402,6 +396,25 @@ WEB_HTML = """
                     </div>
                 </div>
 
+                <div id="team" class="tab-content">
+                    <div class="glass rounded-2xl overflow-hidden shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                        <div class="p-6 border-b border-purple-500/30">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-users mr-2 text-purple-400"></i>Reseller Management</h3>
+                        </div>
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-black/60 border-b border-purple-500/30">
+                                <tr>
+                                    <th class="px-6 py-4 text-purple-300">Username</th>
+                                    <th class="px-6 py-4 text-purple-300">Password</th>
+                                    <th class="px-6 py-4 text-purple-300">Generated Keys</th>
+                                    <th class="px-6 py-4 text-right text-purple-300">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-team" class="divide-y divide-purple-500/20"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div id="promos" class="tab-content">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-1 glass p-6 rounded-2xl border-t-2 border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.2)]">
@@ -412,17 +425,10 @@ WEB_HTML = """
                             <button onclick="createPromo()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded-lg transition shadow-[0_0_15px_rgba(236,72,153,0.5)]">Create Code</button>
                         </div>
                         <div class="md:col-span-2 glass rounded-2xl overflow-hidden">
-                            <div class="p-6 border-b border-purple-500/30">
-                                <h3 class="text-lg font-bold text-white">Active Promos</h3>
-                            </div>
+                            <div class="p-6 border-b border-purple-500/30"><h3 class="text-lg font-bold text-white">Active Promos</h3></div>
                             <table class="w-full text-left text-sm">
                                 <thead class="text-purple-300 border-b border-purple-500/30 bg-black/60">
-                                    <tr>
-                                        <th class="p-4">Code</th>
-                                        <th class="p-4">Discount</th>
-                                        <th class="p-4">Uses Left</th>
-                                        <th class="p-4 text-right">Action</th>
-                                    </tr>
+                                    <tr><th class="p-4">Code</th><th class="p-4">Discount</th><th class="p-4">Uses Left</th><th class="p-4 text-right">Action</th></tr>
                                 </thead>
                                 <tbody id="table-promos" class="divide-y divide-purple-500/20"></tbody>
                             </table>
@@ -433,35 +439,19 @@ WEB_HTML = """
                 <div id="lookup" class="tab-content">
                     <div class="glass p-6 rounded-2xl mb-6 flex gap-4 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                         <input type="text" id="lookup-id" placeholder="Discord User ID..." class="flex-1 bg-black/60 border border-purple-500/50 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition">
-                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]">
-                            <i class="fa-solid fa-search mr-2"></i>Search
-                        </button>
+                        <button onclick="lookupUser()" class="bg-purple-600 hover:bg-purple-500 text-white px-8 font-bold rounded-xl transition shadow-[0_0_15px_rgba(147,51,234,0.5)]"><i class="fa-solid fa-search mr-2"></i>Search</button>
                     </div>
                     <div id="lookup-result" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Spent</p>
-                                <h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3>
-                            </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
-                                <p class="text-gray-400 text-sm font-bold">Total Orders</p>
-                                <h3 id="lu-orders" class="text-3xl font-black text-white">0</h3>
-                            </div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500">
-                                <p class="text-gray-400 text-sm font-bold">Blacklist Status</p>
-                                <h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3>
-                            </div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500"><p class="text-gray-400 text-sm font-bold">Total Spent</p><h3 id="lu-spent" class="text-3xl font-black text-white glow-text">0.00€</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500"><p class="text-gray-400 text-sm font-bold">Total Orders</p><h3 id="lu-orders" class="text-3xl font-black text-white">0</h3></div>
+                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500"><p class="text-gray-400 text-sm font-bold">Blacklist Status</p><h3 id="lu-banned" class="text-xl font-bold mt-2">Clean</h3></div>
                         </div>
                         <div class="glass rounded-2xl overflow-hidden">
                             <div class="p-4 border-b border-purple-500/30 font-bold bg-black/60 text-white">Purchase History</div>
                             <table class="w-full text-left text-sm">
                                 <thead class="text-purple-300 border-b border-purple-500/30">
-                                    <tr>
-                                        <th class="p-4">Invoice</th>
-                                        <th class="p-4">Product</th>
-                                        <th class="p-4">Price</th>
-                                        <th class="p-4">Date</th>
-                                    </tr>
+                                    <tr><th class="p-4">Invoice</th><th class="p-4">Product</th><th class="p-4">Price</th><th class="p-4">Date</th></tr>
                                 </thead>
                                 <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
                             </table>
@@ -475,9 +465,7 @@ WEB_HTML = """
                         <input type="text" id="ann-title" placeholder="Title (e.g. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white font-bold outline-none focus:border-blue-400 transition">
                         <textarea id="ann-desc" placeholder="Message content..." rows="6" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-3 mb-4 text-white resize-none outline-none focus:border-blue-400 transition"></textarea>
                         <input type="text" id="ann-img" placeholder="Image URL (Optional)" class="w-full bg-black/60 border border-purple-500/50 rounded-lg px-4 py-2 mb-6 text-white text-sm outline-none focus:border-blue-400 transition">
-                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.5)]">
-                            <i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord
-                        </button>
+                        <button onclick="sendAnnounce()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(37,99,235,0.5)]"><i class="fa-solid fa-paper-plane mr-2"></i>Send to Discord</button>
                     </div>
                 </div>
 
@@ -490,11 +478,7 @@ WEB_HTML = """
                     <div class="glass rounded-2xl overflow-hidden">
                         <table class="w-full text-left text-sm">
                             <thead class="text-red-300 border-b border-red-500/30 bg-black/60">
-                                <tr>
-                                    <th class="p-4">User ID</th>
-                                    <th class="p-4">Reason</th>
-                                    <th class="p-4 text-right">Action</th>
-                                </tr>
+                                <tr><th class="p-4">User ID</th><th class="p-4">Reason</th><th class="p-4 text-right">Action</th></tr>
                             </thead>
                             <tbody id="table-blacklist" class="divide-y divide-purple-500/20"></tbody>
                         </table>
@@ -524,17 +508,8 @@ WEB_HTML = """
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glass p-6 rounded-2xl border-t-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
                     <h2 class="text-xl font-bold mb-6 text-white"><i class="fa-solid fa-bolt mr-2 text-purple-400"></i>Generate Access</h2>
-                    <div class="space-y-4">
-                        <button onclick="genKey('day_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-bold">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                        </button>
-                        <button onclick="genKey('week_1')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
-                            <span class="font-bold">1 Week Key</span><i class="fa-solid fa-plus text-purple-400"></i>
-                        </button>
-                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-600 hover:to-pink-500 p-4 rounded-xl flex justify-between items-center text-white transition shadow-[0_0_20px_rgba(168,85,247,0.6)]">
-                            <span class="font-bold">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
-                        </button>
-                    </div>
+                    <div class="space-y-4" id="reseller-gen-buttons">
+                        </div>
                 </div>
                 <div class="glass p-6 rounded-2xl shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                     <h2 class="text-xl font-bold mb-4 text-white">Your Stock</h2>
@@ -560,7 +535,10 @@ WEB_HTML = """
         function switchAuth(type) {
             document.getElementById('form-login').classList.add('hidden-view'); 
             document.getElementById('form-register').classList.add('hidden-view');
+            document.getElementById('form-customer').classList.add('hidden-view');
+            
             document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
+            document.getElementById('auth-tab-customer').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
             document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-gray-300 transition border-b-2 border-transparent";
             
             document.getElementById('form-' + type).classList.remove('hidden-view');
@@ -574,20 +552,12 @@ WEB_HTML = """
             if (token) headers['Authorization'] = token;
             
             try {
-                const res = await fetch(endpoint, {
-                    method: 'POST', 
-                    headers: headers, 
-                    body: JSON.stringify(data)
-                });
-                
-                if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register') { 
-                    logout(); 
-                    throw new Error('Unauthorized'); 
+                const res = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(data) });
+                if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register' && endpoint !== '/api/customer_login') { 
+                    logout(); throw new Error('Unauthorized'); 
                 }
                 return res;
             } catch (e) {
-                console.error("API Call Error:", e);
-                // Zeigt Reconnect-Screen, wenn Server offline ist
                 if (endpoint !== '/api/verify') {
                     document.getElementById('reconnect-overlay').classList.remove('hidden-view');
                     setTimeout(checkAuthOnLoad, 2500);
@@ -598,8 +568,7 @@ WEB_HTML = """
 
         function showError(msg) { 
             const e = document.getElementById('auth-error'); 
-            e.innerText = msg; 
-            e.classList.remove('hidden'); 
+            e.innerText = msg; e.classList.remove('hidden'); 
         }
 
         async function login() {
@@ -613,12 +582,25 @@ WEB_HTML = """
                     const d = await res.json(); 
                     localStorage.setItem('v_token', d.token); 
                     initApp(d.role, d.user); 
+                } else { showError("Falscher Username oder falsches Passwort!"); }
+            } catch (e) {}
+        }
+
+        async function customerLogin() {
+            const k = document.getElementById('c-key').value;
+            if (!k) return showError("Bitte gib einen Key ein.");
+            
+            try {
+                const res = await apiCall('/api/customer_login', {key: k});
+                if (res.ok) { 
+                    const d = await res.json(); 
+                    localStorage.setItem('v_token', d.token); 
+                    initApp(d.role, d.user); 
                 } else {
-                    showError("Falscher Username oder falsches Passwort!");
+                    const e = await res.json();
+                    showError(e.error || "Key nicht gefunden oder ungültig."); 
                 }
-            } catch (e) {
-                showError("Server offline. Versuch es gleich nochmal.");
-            }
+            } catch (e) {}
         }
 
         async function register() {
@@ -638,9 +620,7 @@ WEB_HTML = """
                     const e = await res.json(); 
                     showError(e.error || "Fehler bei der Registrierung!"); 
                 }
-            } catch (e) {
-                showError("Server offline. Versuch es gleich nochmal.");
-            }
+            } catch (e) {}
         }
 
         function logout() { 
@@ -651,47 +631,43 @@ WEB_HTML = """
         async function checkAuthOnLoad() {
             const t = localStorage.getItem('v_token');
             if (t) {
-                // Verhindert das kurze Aufblitzen der Login-Seite
                 document.getElementById('view-auth').classList.add('hidden-view');
                 document.getElementById('reconnect-overlay').classList.remove('hidden-view');
                 
                 try {
                     const res = await fetch('/api/verify', {
-                        method: 'POST', 
-                        headers: {'Authorization': t, 'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({})
+                        method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})
                     });
                     
                     if (res.ok) { 
-                        // Server ist erreichbar -> Overlay weg, App starten!
                         document.getElementById('reconnect-overlay').classList.add('hidden-view');
                         const d = await res.json(); 
                         initApp(d.role, d.user); 
-                    } else if (res.status === 401) {
-                        logout(); 
-                    } else {
-                        // Railway startet gerade neu (502/503 Error). Nicht ausloggen! Einfach warten.
-                        console.log("Server temporarily offline, retrying...");
-                        setTimeout(checkAuthOnLoad, 3000);
-                    }
-                } catch(e) {
-                    // Netzwerkfehler (Server down). Nicht ausloggen!
-                    console.log("Network error, retrying...");
-                    setTimeout(checkAuthOnLoad, 3000);
-                }
+                    } else if (res.status === 401) { logout(); } 
+                    else { setTimeout(checkAuthOnLoad, 3000); }
+                } catch(e) { setTimeout(checkAuthOnLoad, 3000); }
             }
         }
 
         function initApp(role, name) {
             document.getElementById('view-auth').classList.add('hidden-view');
+            document.getElementById('reconnect-overlay').classList.add('hidden-view');
             if (role === 'admin') { 
                 document.getElementById('view-admin').classList.remove('hidden-view'); 
                 document.getElementById('admin-name').innerText = name; 
+                loadProductsForAdmin();
                 nav('dash'); 
+                loadDiscordStats();
+                setInterval(loadDiscordStats, 10000);
             } else if (role === 'reseller') { 
                 document.getElementById('view-reseller').classList.remove('hidden-view'); 
                 document.getElementById('r-name').innerText = name; 
+                loadProductsForReseller();
                 loadResellerKeys(); 
+            } else if (role === 'customer') {
+                document.getElementById('view-customer').classList.remove('hidden-view'); 
+                document.getElementById('cust-key-display').innerText = name;
+                loadCustomerData();
             }
         }
 
@@ -705,20 +681,51 @@ WEB_HTML = """
             document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-300 bg-purple-600/30 font-bold border border-purple-500/50 shadow-[inset_0_0_15px_rgba(168,85,247,0.3)]";
             
             const titles = {
-                'dash': 'Overview', 
-                'gen': 'Key Generator',
-                'keys': 'Keys & Logs', 
-                'promos': 'Promo Codes', 
-                'lookup': 'User Lookup', 
-                'announce': 'Broadcast', 
-                'blacklist': 'Blacklist'
+                'dash': 'Overview', 'gen': 'Key Generator', 'keys': 'Keys & Logs', 'team': 'Team Management',
+                'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Broadcast', 'blacklist': 'Blacklist'
             };
             document.getElementById('page-title').innerText = titles[tabId];
             
             if (tabId === 'dash') { loadDashboard(); loadActivity(); }
             if (tabId === 'keys') loadKeys();
+            if (tabId === 'team') loadTeam();
             if (tabId === 'promos') loadPromos();
             if (tabId === 'blacklist') loadBlacklist();
+        }
+
+        async function loadDiscordStats() {
+            try {
+                const res = await apiCall('/api/discord_stats', {});
+                const data = await res.json();
+                document.getElementById('dc-members').innerText = data.members;
+                document.getElementById('dc-tickets').innerText = data.open_tickets;
+            } catch(e){}
+        }
+
+        async function loadProductsForAdmin() {
+            try {
+                const res = await apiCall('/api/products', {});
+                const data = await res.json();
+                const container = document.getElementById('admin-gen-buttons');
+                container.innerHTML = Object.entries(data).map(([pid, p]) => `
+                    <button onclick="genAdminKey('${pid}')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                        <span class="font-bold">${p.label} Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                    </button>
+                `).join('');
+            } catch(e){}
+        }
+        
+        async function loadProductsForReseller() {
+            try {
+                const res = await apiCall('/api/products', {});
+                const data = await res.json();
+                const container = document.getElementById('reseller-gen-buttons');
+                container.innerHTML = Object.entries(data).map(([pid, p]) => `
+                    <button onclick="genKey('${pid}')" class="w-full bg-black/60 hover:bg-purple-600/30 border border-purple-500/50 p-4 rounded-xl flex justify-between items-center transition text-white shadow-lg">
+                        <span class="font-bold">${p.label} Key</span><i class="fa-solid fa-plus text-purple-400"></i>
+                    </button>
+                `).join('');
+            } catch(e){}
         }
 
         async function loadDashboard() {
@@ -735,41 +742,18 @@ WEB_HTML = """
                 
                 myChart = new Chart(ctx, {
                     type: 'line', 
-                    data: { 
-                        labels: data.chart_labels, 
-                        datasets: [{ 
-                            label: 'Revenue (€)', 
-                            data: data.chart_data, 
-                            borderColor: '#a855f7', 
-                            backgroundColor: 'rgba(168, 85, 247, 0.1)', 
-                            borderWidth: 3, 
-                            fill: true, 
-                            tension: 0.4 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: {display: false} }, 
-                        scales: { 
-                            y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, 
-                            x: {grid: {color: 'rgba(168,85,247,0.1)'}} 
-                        } 
-                    }
+                    data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } }
                 });
-            } catch(e) { console.error("Could not load stats"); }
+            } catch(e) {}
         }
 
         async function loadActivity() {
             try {
-                const res = await apiCall('/api/activity', {}); 
-                const data = await res.json();
+                const res = await apiCall('/api/activity', {}); const data = await res.json();
                 document.getElementById('activity-feed').innerHTML = data.map(a => `
                     <div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition">
-                        <div>
-                            <span class="font-black text-purple-400 text-sm mr-2">${a.user}</span>
-                            <span class="text-sm text-gray-300 font-bold">${a.action}</span>
-                        </div>
+                        <div><span class="font-black text-purple-400 text-sm mr-2">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div>
                         <span class="text-xs text-gray-500 font-mono">${a.time.split('T')[1].substring(0,5)}</span>
                     </div>
                 `).join('');
@@ -778,221 +762,143 @@ WEB_HTML = """
 
         async function loadKeys() {
             try {
-                const res = await apiCall('/api/keys', {}); 
-                const data = await res.json(); 
-                const tb = document.getElementById('table-keys');
-                
-                if (Object.keys(data).length === 0) {
-                    return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-gray-500 font-bold">No keys generated</td></tr>';
-                }
+                const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-6 text-center text-gray-500 font-bold">No keys generated</td></tr>';
                 
                 tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
                     let badge = info.used ? '<span class="px-3 py-1 rounded-md bg-red-500/20 text-red-400 text-xs border border-red-500/40 font-bold tracking-wider uppercase">Used</span>' : '<span class="px-3 py-1 rounded-md bg-green-500/20 text-green-400 text-xs border border-green-500/40 font-bold tracking-wider uppercase">Active</span>';
-                    if (info.revoked) {
-                        badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-bold tracking-wider uppercase">Banned</span>';
-                    }
+                    if (info.revoked) badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-bold tracking-wider uppercase">Banned</span>';
                     
                     const creator = info.created_by ? `<span class="text-blue-400 font-bold">${info.created_by}</span>` : 'System';
                     const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs font-bold">${info.used_by}</span>` : '-';
                     const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs font-bold bg-black/50 text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white px-3 py-2 rounded-lg transition shadow-[0_0_10px_rgba(220,38,38,0.2)]">BAN KEY</button>` : '-';
                     
-                    return `
-                        <tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10">
-                            <td class="px-6 py-4 font-mono text-purple-300 font-bold tracking-wider">${key}</td>
-                            <td class="px-6 py-4 text-gray-300 font-bold">${info.type}</td>
-                            <td class="px-6 py-4">${creator}</td>
-                            <td class="px-6 py-4">${usedBy}</td>
-                            <td class="px-6 py-4">${badge}</td>
-                            <td class="px-6 py-4 text-right">${act}</td>
-                        </tr>
-                    `;
+                    return `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="px-6 py-4 font-mono text-purple-300 font-bold tracking-wider">${key}</td><td class="px-6 py-4 text-gray-300 font-bold">${info.type}</td><td class="px-6 py-4">${creator}</td><td class="px-6 py-4">${usedBy}</td><td class="px-6 py-4">${badge}</td><td class="px-6 py-4 text-right">${act}</td></tr>`;
                 }).join('');
             } catch(e) {}
         }
 
+        async function loadTeam() {
+            try {
+                const res = await apiCall('/api/team', {}); const data = await res.json(); const tb = document.getElementById('table-team');
+                if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-gray-500 font-bold">No resellers active</td></tr>';
+                
+                tb.innerHTML = data.map(u => `
+                    <tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10">
+                        <td class="px-6 py-4 font-bold text-blue-400">${u.username}</td>
+                        <td class="px-6 py-4 font-mono text-gray-400">${u.password}</td>
+                        <td class="px-6 py-4 font-black text-white">${u.keys_generated}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e){}
+        }
+
+        async function deleteReseller(username) {
+            if(confirm(`Willst du den Reseller ${username} wirklich löschen?`)) {
+                await apiCall('/api/team/delete', {username: username});
+                loadTeam();
+            }
+        }
+
         async function revokeKey(k) { 
             if (confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')) { 
-                await apiCall('/api/keys/revoke', {key: k}); 
-                loadKeys(); 
+                await apiCall('/api/keys/revoke', {key: k}); loadKeys(); 
             } 
         }
 
         async function loadPromos() {
             try {
-                const res = await apiCall('/api/promos', {}); 
-                const data = await res.json(); 
-                const tb = document.getElementById('table-promos');
-                
-                if (Object.keys(data).length === 0) {
-                    return tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No active promos.</td></tr>';
-                }
-                
-                tb.innerHTML = Object.entries(data).map(([code, info]) => `
-                    <tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10">
-                        <td class="p-4 font-mono font-black text-pink-400 tracking-wider">${code}</td>
-                        <td class="p-4 text-purple-300 font-bold">-${info.discount}%</td>
-                        <td class="p-4 text-gray-300 font-bold">${info.uses}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="rmPromo('${code}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos');
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No active promos.</td></tr>';
+                tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono font-black text-pink-400 tracking-wider">${code}</td><td class="p-4 text-purple-300 font-bold">-${info.discount}%</td><td class="p-4 text-gray-300 font-bold">${info.uses}</td><td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
             } catch(e) {}
         }
 
         async function createPromo() {
-            const c = document.getElementById('p-code').value.toUpperCase();
-            const d = document.getElementById('p-disc').value;
-            const u = document.getElementById('p-uses').value;
-            
+            const c = document.getElementById('p-code').value.toUpperCase(), d = document.getElementById('p-disc').value, u = document.getElementById('p-uses').value;
             if (!c || !d || !u) return alert("Please fill all fields"); 
             await apiCall('/api/promos/add', {code: c, discount: parseInt(d), uses: parseInt(u)});
-            
-            document.getElementById('p-code').value = ''; 
-            document.getElementById('p-disc').value = ''; 
-            document.getElementById('p-uses').value = ''; 
-            loadPromos();
+            document.getElementById('p-code').value = ''; document.getElementById('p-disc').value = ''; document.getElementById('p-uses').value = ''; loadPromos();
         }
 
-        async function rmPromo(code) { 
-            await apiCall('/api/promos/remove', {code: code}); 
-            loadPromos(); 
-        }
+        async function rmPromo(code) { await apiCall('/api/promos/remove', {code: code}); loadPromos(); }
         
         async function lookupUser() {
-            const uid = document.getElementById('lookup-id').value; 
-            if (!uid) return;
-            
+            const uid = document.getElementById('lookup-id').value; if (!uid) return;
             try {
-                const res = await apiCall('/api/lookup', {user_id: uid}); 
-                const data = await res.json();
-                
+                const res = await apiCall('/api/lookup', {user_id: uid}); const data = await res.json();
                 document.getElementById('lookup-result').classList.remove('hidden');
                 document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; 
                 document.getElementById('lu-orders').innerText = data.total_orders;
-                
                 const b = document.getElementById('lu-banned');
-                if (data.is_banned) { 
-                    b.innerText = "BANNED"; 
-                    b.className = "text-xl font-black text-red-500 mt-2 glow-text"; 
-                } else { 
-                    b.innerText = "Clean"; 
-                    b.className = "text-xl font-bold text-green-400 mt-2"; 
-                }
-                
+                if (data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-black text-red-500 mt-2 glow-text"; } 
+                else { b.innerText = "Clean"; b.className = "text-xl font-bold text-green-400 mt-2"; }
                 const tb = document.getElementById('lu-table');
-                if (data.invoices.length === 0) {
-                    tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No purchases found.</td></tr>';
-                } else {
-                    tb.innerHTML = data.invoices.map(i => `
-                        <tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10">
-                            <td class="p-4 font-mono text-xs text-gray-400 font-bold tracking-wider">${i.id}</td>
-                            <td class="p-4 text-purple-300 font-bold">${i.product}</td>
-                            <td class="p-4 font-black text-green-400">${i.price}€</td>
-                            <td class="p-4 text-xs text-gray-400 font-bold">${i.date.split('T')[0]}</td>
-                        </tr>
-                    `).join('');
-                }
+                if (data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">No purchases found.</td></tr>';
+                else tb.innerHTML = data.invoices.map(i => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono text-xs text-gray-400 font-bold tracking-wider">${i.id}</td><td class="p-4 text-purple-300 font-bold">${i.product}</td><td class="p-4 font-black text-green-400">${i.price}€</td><td class="p-4 text-xs text-gray-400 font-bold">${i.date.split('T')[0]}</td></tr>`).join('');
             } catch(e) {}
         }
 
         async function sendAnnounce() {
-            const t = document.getElementById('ann-title').value;
-            const d = document.getElementById('ann-desc').value;
-            const i = document.getElementById('ann-img').value;
-            
+            const t = document.getElementById('ann-title').value, d = document.getElementById('ann-desc').value, i = document.getElementById('ann-img').value;
             if (!t || !d) return alert("Title and Description required!");
-            
-            await apiCall('/api/announce', {title: t, desc: d, img: i}); 
-            alert("Broadcast sent successfully!");
-            
-            document.getElementById('ann-title').value = ''; 
-            document.getElementById('ann-desc').value = ''; 
-            document.getElementById('ann-img').value = '';
+            await apiCall('/api/announce', {title: t, desc: d, img: i}); alert("Broadcast sent successfully!");
+            document.getElementById('ann-title').value = ''; document.getElementById('ann-desc').value = ''; document.getElementById('ann-img').value = '';
         }
 
         async function loadBlacklist() {
             try {
-                const res = await apiCall('/api/blacklist', {}); 
-                const data = await res.json(); 
-                const tb = document.getElementById('table-blacklist');
-                
-                if (Object.keys(data).length === 0) {
-                    return tb.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-gray-500 font-bold">Blacklist is empty.</td></tr>';
-                }
-                
-                tb.innerHTML = Object.entries(data).map(([uid, info]) => `
-                    <tr class="hover:bg-red-500/20 transition border-b border-purple-500/10">
-                        <td class="p-4 font-mono text-red-300 font-bold tracking-wider">${uid}</td>
-                        <td class="p-4 text-gray-300 font-bold">${info.reason}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="rmBlacklist('${uid}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                const res = await apiCall('/api/blacklist', {}); const data = await res.json(); const tb = document.getElementById('table-blacklist');
+                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-gray-500 font-bold">Blacklist is empty.</td></tr>';
+                tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-red-500/20 transition border-b border-purple-500/10"><td class="p-4 font-mono text-red-300 font-bold tracking-wider">${uid}</td><td class="p-4 text-gray-300 font-bold">${info.reason}</td><td class="p-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400 bg-black/50 border border-red-500/30 p-2 rounded hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
             } catch(e) {}
         }
 
         async function addBlacklist() {
-            const uid = document.getElementById('bl-id').value;
-            const rsn = document.getElementById('bl-reason').value || "Web Ban"; 
-            
-            if (!uid) return; 
-            
-            await apiCall('/api/blacklist/add', {user_id: uid, reason: rsn}); 
-            document.getElementById('bl-id').value = ''; 
-            document.getElementById('bl-reason').value = ''; 
-            loadBlacklist();
+            const uid = document.getElementById('bl-id').value, rsn = document.getElementById('bl-reason').value || "Web Ban"; 
+            if (!uid) return; await apiCall('/api/blacklist/add', {user_id: uid, reason: rsn}); 
+            document.getElementById('bl-id').value = ''; document.getElementById('bl-reason').value = ''; loadBlacklist();
         }
 
-        async function rmBlacklist(uid) { 
-            await apiCall('/api/blacklist/remove', {user_id: uid}); 
-            loadBlacklist(); 
-        }
+        async function rmBlacklist(uid) { await apiCall('/api/blacklist/remove', {user_id: uid}); loadBlacklist(); }
 
         // RESELLER & ADMIN GENERATOR FUNCTIONS
         async function loadResellerKeys() {
             try {
-                const res = await apiCall('/api/reseller/data', {}); 
-                const data = await res.json();
-                
-                if (data.my_keys.length === 0) {
-                    document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-6 text-center font-bold">Noch keine Keys generiert.</p>';
-                } else {
-                    document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `
-                        <div class="bg-black/60 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center transition hover:border-purple-500/70 shadow-lg">
-                            <span class="font-mono text-sm text-purple-300 font-bold tracking-wider">${k.key}</span>
-                            <span class="text-xs font-black px-3 py-1 bg-purple-500/20 text-purple-300 rounded-md border border-purple-500/40 uppercase">${k.type}</span>
-                        </div>
-                    `).join('');
-                }
+                const res = await apiCall('/api/reseller/data', {}); const data = await res.json();
+                if (data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-6 text-center font-bold">Noch keine Keys generiert.</p>';
+                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `<div class="bg-black/60 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center transition hover:border-purple-500/70 shadow-lg mb-3"><span class="font-mono text-sm text-purple-300 font-bold tracking-wider">${k.key}</span><span class="text-xs font-black px-3 py-1 bg-purple-500/20 text-purple-300 rounded-md border border-purple-500/40 uppercase">${k.type}</span></div>`).join('');
             } catch(e) {}
         }
 
         async function genKey(type) {
-            const res = await apiCall('/api/reseller/generate', {t: type}); 
-            const d = await res.json();
-            
-            document.getElementById('new-key').value = d.key; 
-            document.getElementById('key-modal').classList.remove('hidden-view'); 
-            loadResellerKeys();
+            const res = await apiCall('/api/reseller/generate', {t: type}); const d = await res.json();
+            document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); loadResellerKeys();
         }
 
         async function genAdminKey(type) {
-            const res = await apiCall('/api/admin/generate', {t: type}); 
-            const d = await res.json();
-            
-            document.getElementById('new-key').value = d.key; 
-            document.getElementById('key-modal').classList.remove('hidden-view'); 
+            const res = await apiCall('/api/admin/generate', {t: type}); const d = await res.json();
+            document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); 
+        }
+        
+        async function loadCustomerData() {
+            try {
+                const res = await apiCall('/api/customer_data', {});
+                const data = await res.json();
+                document.getElementById('cust-prod').innerText = data.type;
+                document.getElementById('cust-status').innerText = data.status;
+                document.getElementById('cust-discord').innerText = data.used_by;
+                document.getElementById('cust-created').innerText = data.created_at.split('T')[0];
+                
+                if(data.status === "Banned") document.getElementById('cust-status').className = "text-xl font-black text-red-500";
+                else if(data.status === "Active") document.getElementById('cust-status').className = "text-xl font-black text-green-400";
+            } catch(e){}
         }
 
-        function closeModal() { 
-            document.getElementById('key-modal').classList.add('hidden-view'); 
-        }
+        function closeModal() { document.getElementById('key-modal').classList.add('hidden-view'); }
 
         window.onload = checkAuthOnLoad;
     </script>
@@ -1058,6 +964,39 @@ async def api_login(request):
         
     return web.Response(status=401)
 
+async def api_customer_login(request):
+    data = await request.json()
+    key = data.get("key", "").strip().upper()
+    
+    if not key or key not in keys_db:
+        return web.json_response({"error": "Key existiert nicht."}, status=400)
+        
+    token = str(uuid.uuid4())
+    web_sessions[token] = {"user": key, "role": "customer"}
+    save_json(SESSIONS_FILE, web_sessions)
+    return web.json_response({"ok": True, "token": token, "role": "customer", "user": key})
+
+async def api_customer_data(request):
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "customer": 
+        return web.Response(status=401)
+        
+    key = user_info["user"]
+    kdata = keys_db.get(key, {})
+    prod = products_db.get(kdata.get("type"), {})
+    
+    status = "Active"
+    if kdata.get("revoked"): status = "Banned"
+    elif not kdata.get("used"): status = "Unused"
+    
+    return web.json_response({
+        "key": key,
+        "type": prod.get("label", "Unknown"),
+        "status": status,
+        "created_at": kdata.get("created_at"),
+        "used_by": kdata.get("used_by", "None")
+    })
+
 async def api_verify(request):
     user = get_user_from_token(request)
     if user: 
@@ -1097,6 +1036,44 @@ async def api_stats(request):
         "chart_labels": labels, 
         "chart_data": list(rev_data.values())
     })
+    
+async def api_discord_stats(request):
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    guild = bot.get_guild(GUILD_ID)
+    members = guild.member_count if guild else 0
+    open_tickets = sum(1 for t in ticket_data.values() if t.get("status") in ["waiting", "reviewing"])
+    return web.json_response({"members": members, "open_tickets": open_tickets})
+
+async def api_team(request):
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    resellers = []
+    for uname, data in users_db.items():
+        if data.get("role") == "reseller":
+            gen_count = sum(1 for k in keys_db.values() if k.get("created_by") == uname)
+            resellers.append({"username": uname, "password": data["pass"], "keys_generated": gen_count})
+    return web.json_response(resellers)
+
+async def api_team_delete(request):
+    user_info = get_user_from_token(request)
+    if not user_info or user_info.get("role") != "admin": 
+        return web.Response(status=401)
+        
+    data = await request.json()
+    uname = data.get("username")
+    if uname in users_db and users_db[uname].get("role") == "reseller":
+        del users_db[uname]
+        save_json(USERS_FILE, users_db)
+        log_activity(f"Deleted Reseller {uname}", user_info["user"])
+    return web.json_response({"ok": True})
+
+async def api_products(request):
+    return web.json_response(products_db)
 
 async def api_activity(request):
     user_info = get_user_from_token(request)
@@ -1189,7 +1166,7 @@ async def api_lookup(request):
             spent += float(data.get("final_price_eur", 0))
             invs.append({
                 "id": inv_id, 
-                "product": PRODUCTS.get(data["product_type"], {}).get("label", "Unknown"), 
+                "product": products_db.get(data["product_type"], {}).get("label", "Unknown"), 
                 "price": data.get("final_price_eur", 0), 
                 "date": data["created_at"]
             })
@@ -1264,7 +1241,7 @@ async def api_reseller_data(request):
         
     my_keys = [{
         "key": k, 
-        "type": PRODUCTS.get(v["type"], {}).get("label", "Unknown")
+        "type": products_db.get(v["type"], {}).get("label", "Unknown")
     } for k, v in keys_db.items() if v.get("created_by") == user_info["user"]]
     
     return web.json_response({"my_keys": my_keys})
@@ -1275,7 +1252,7 @@ async def api_reseller_gen(request):
         return web.Response(status=401)
         
     ptype = (await request.json()).get("t", "day_1")
-    prefix = PRODUCTS[ptype]["key_prefix"]
+    prefix = products_db[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     
     keys_db[new_key] = {
@@ -1298,7 +1275,7 @@ async def api_admin_gen(request):
         return web.Response(status=401)
         
     ptype = (await request.json()).get("t", "day_1")
-    prefix = PRODUCTS[ptype]["key_prefix"]
+    prefix = products_db[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
     
     keys_db[new_key] = {
@@ -1320,14 +1297,20 @@ async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_index)
     app.router.add_post('/api/login', api_login)
+    app.router.add_post('/api/customer_login', api_customer_login)
     app.router.add_post('/api/register', api_register)
     app.router.add_post('/api/verify', api_verify)
     
     app.router.add_post('/api/stats', api_stats)
+    app.router.add_post('/api/discord_stats', api_discord_stats)
     app.router.add_post('/api/activity', api_activity)
     app.router.add_post('/api/keys', api_keys)
     app.router.add_post('/api/keys/revoke', api_revoke_key)
     
+    app.router.add_post('/api/team', api_team)
+    app.router.add_post('/api/team/delete', api_team_delete)
+    
+    app.router.add_post('/api/products', api_products)
     app.router.add_post('/api/promos', api_promos)
     app.router.add_post('/api/promos/add', api_add_promo)
     app.router.add_post('/api/promos/remove', api_rm_promo)
@@ -1343,6 +1326,7 @@ async def start_web_server():
     app.router.add_post('/api/reseller/generate', api_reseller_gen)
     
     app.router.add_post('/api/admin/generate', api_admin_gen)
+    app.router.add_post('/api/customer_data', api_customer_data)
     
     runner = web.AppRunner(app)
     await runner.setup()
@@ -1367,7 +1351,7 @@ def is_reseller_dc(member: discord.Member | None) -> bool:
     return member and any(role.id == RESELLER_ROLE_ID for role in member.roles)
 
 def get_price(product_key: str, member: discord.Member | None = None, promo_discount: int = 0) -> float:
-    base_price = PRODUCTS[product_key]["price_eur"]
+    base_price = products_db[product_key]["price_eur"]
     if is_reseller_dc(member): 
         base_price = round(base_price * 0.5, 2)
     if promo_discount > 0: 
@@ -1381,7 +1365,7 @@ async def dm_user_safe(user: discord.abc.User, content: str = None, embed: disco
         pass
 
 def generate_key(product_type: str, ticket_id: str | None = None, creator="System") -> str:
-    prefix = PRODUCTS[product_type]["key_prefix"]
+    prefix = products_db[product_type]["key_prefix"]
     while True:
         key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
         if key not in keys_db:
@@ -1454,7 +1438,7 @@ async def find_existing_ticket(guild: discord.Guild, user: discord.Member):
 
 # --- EMBEDS ---
 def build_order_summary(product_key: str, payment_key: str, user: discord.Member, ltc_price_eur: float | None = None) -> discord.Embed:
-    product = PRODUCTS[product_key]
+    product = products_db[product_key]
     payment = PAYMENTS[payment_key]
     price = get_price(product_key, user)
     price_header = f"💶 **Price:** {format_price(price)}€"
@@ -1492,7 +1476,7 @@ def build_payment_summary_embed(channel_id: int) -> discord.Embed:
     promo_code = data.get("applied_promo")
     
     promo_discount = promos_db[promo_code]["discount"] if promo_code and promo_code in promos_db else 0
-    if product_key in PRODUCTS:
+    if product_key in products_db:
         price_text = f"{format_price(get_price(product_key, user, promo_discount))}€"
         if is_reseller_dc(user): 
             price_text += " (Reseller)"
@@ -1504,7 +1488,7 @@ def build_payment_summary_embed(channel_id: int) -> discord.Embed:
     status_map = {"waiting": "🟡 Waiting", "reviewing": "🟠 Reviewing", "approved": "✅ Approved", "denied": "❌ Denied"}
     
     embed = discord.Embed(title="📋 Payment Summary", description=f"{premium_divider()}\n**Live order status**\n{premium_divider()}", color=COLOR_INFO)
-    embed.add_field(name="Product", value=PRODUCTS[product_key]["label"] if product_key in PRODUCTS else "Not selected", inline=True)
+    embed.add_field(name="Product", value=products_db[product_key]["label"] if product_key in products_db else "Not selected", inline=True)
     embed.add_field(name="Price", value=price_text, inline=True)
     embed.add_field(name="Method", value=PAYMENTS[data.get("payment_key")]["label"] if data.get("payment_key") in PAYMENTS else "Not selected", inline=True)
     embed.add_field(name="Status", value=status_map.get(data.get("status", "waiting"), data.get("status", "waiting")), inline=True)
@@ -1555,7 +1539,8 @@ async def redeem_key_for_user(guild: discord.Guild, member: discord.Member, key:
     keys_db[key].update({"used": True, "used_by": str(member.id)})
     save_json(KEYS_FILE, keys_db)
     
-    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + PRODUCTS[pt]["duration"]).isoformat() if PRODUCTS[pt]["duration"] else None}
+    dur_days = products_db[pt].get("duration_days", 0)
+    redeemed_db[str(member.id)] = {"key": key, "type": pt, "role_id": REDEEM_ROLE_ID, "expires_at": (now_utc() + timedelta(days=dur_days)).isoformat() if dur_days > 0 else None}
     save_json(REDEEMED_FILE, redeemed_db)
     
     await member.add_roles(r)
@@ -1747,14 +1732,17 @@ class PaymentSelectView(discord.ui.View):
 
 class ProductSelect(discord.ui.Select):
     def __init__(self):
-        options = [
-            discord.SelectOption(label="1 Day", description="5€", value="day_1", emoji="📅"), 
-            discord.SelectOption(label="1 Week", description="15€", value="week_1", emoji="🗓️"), 
-            discord.SelectOption(label="Lifetime", description="30€", value="lifetime", emoji="♾️")
-        ]
+        options = []
+        for k, v in products_db.items():
+            options.append(discord.SelectOption(label=v["label"], description=f"{v['price_eur']}€", value=k, emoji="📦"))
+        if not options:
+            options.append(discord.SelectOption(label="Keine Produkte verfügbar", value="none"))
         super().__init__(placeholder="📦 Choose your product", min_values=1, max_values=1, options=options, custom_id="buy_product_select")
         
     async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == "none":
+            return await interaction.response.send_message("Keine Produkte im System.", ephemeral=True)
+            
         data = ticket_data.get(str(interaction.channel.id))
         if not data:
             return await interaction.response.send_message("Ticket-Daten nicht gefunden.", ephemeral=True)
@@ -1762,7 +1750,7 @@ class ProductSelect(discord.ui.Select):
         data["product_key"] = self.values[0]
         save_json(TICKETS_FILE, ticket_data)
         
-        embed = discord.Embed(title="📦 Product Selected", description=f"**{PRODUCTS[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO)
+        embed = discord.Embed(title="📦 Product Selected", description=f"**{products_db[self.values[0]]['label']}** selected.\nNow choose your payment method below.", color=COLOR_INFO)
         await interaction.response.send_message(embed=embed, view=PaymentSelectView())
         await update_payment_summary_message(interaction.channel)
 
@@ -1826,7 +1814,7 @@ async def process_approve(interaction: discord.Interaction, target_channel_id: i
             await update_payment_summary_message(channel)
         
         if buyer: 
-            await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`", color=COLOR_SUCCESS))
+            await dm_user_safe(buyer, embed=discord.Embed(title="🔑 Purchase Approved", description=f"**Key:** `{generated_key}`\nDu kannst dich mit diesem Key auf der Website einloggen!", color=COLOR_SUCCESS))
             
         await interaction.response.send_message("✅ Approved. Key wurde generiert und ans Ticket gesendet.", ephemeral=True)
         
@@ -1963,7 +1951,7 @@ class RedeemKeyModal(discord.ui.Modal, title="Paste your key here"):
         await interaction.response.defer(ephemeral=True)
         ok, res = await redeem_key_for_user(interaction.guild, interaction.user, str(self.key_input).strip().upper())
         if ok: 
-            await interaction.followup.send(f"✅ Success! You received the {PRODUCTS[res]['label']} role.", ephemeral=True)
+            await interaction.followup.send(f"✅ Success! You received the {products_db[res]['label']} role.", ephemeral=True)
         else: 
             await interaction.followup.send(f"❌ {res}", ephemeral=True)
 
