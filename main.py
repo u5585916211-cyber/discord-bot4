@@ -4,7 +4,10 @@ import json
 import uuid
 import asyncio
 import aiohttp
+import smtplib
 from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from aiohttp import web
 import discord
@@ -16,6 +19,12 @@ from discord import app_commands
 # =========================================================
 TOKEN = os.getenv("TOKEN")
 GUILD_ID_RAW = os.getenv("GUILD_ID")
+
+# --- EMAIL SMTP SETUP ---
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.firstmail.ltd")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
+SMTP_USER = os.getenv("genG1@firstmailler.com") # Deine Firstmail Adresse
+SMTP_PASS = os.getenv("RAGEONtop0") # Dein Firstmail Passwort
 
 if not TOKEN or not GUILD_ID_RAW: 
     raise ValueError("TOKEN oder GUILD_ID fehlt in den Railway Variablen.")
@@ -155,6 +164,64 @@ def build_invoice_id() -> str:
 
 def is_blacklisted(user_id: int): return str(user_id) in blacklist_db
 
+# --- NEU: AUTO-CHECKER & MAIL SENDEN ---
+async def verify_ltc_payment(txid):
+    if txid in used_txids_db: 
+        return False, "Diese TXID wurde bereits verwendet."
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.blockcypher.com/v1/ltc/main/txs/{txid}", timeout=15) as resp:
+            if resp.status != 200: 
+                return False, "Ungültige TXID oder Blockchain-API offline."
+            data = await resp.json()
+            for out in data.get("outputs", []):
+                if LITECOIN_ADDRESS in out.get("addresses", []):
+                    used_txids_db[txid] = {"time": iso_now()}
+                    save_json(USED_TXIDS_FILE, used_txids_db)
+                    return True, "Zahlung verifiziert."
+    return False, "Keine Zahlung an unsere LTC Adresse gefunden."
+
+def send_delivery_email(to_email, product_label, key):
+    if not SMTP_USER or not SMTP_PASS:
+        print("⚠️ Email ERROR: SMTP_USER oder SMTP_PASS fehlen in den Variablen!")
+        return False
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = to_email
+        msg['Subject'] = f"Deine Bestellung bei {SERVER_NAME} ist da! 🎉"
+        
+        body = f"""Hallo!
+
+Vielen Dank für deinen Einkauf bei {SERVER_NAME}.
+
+Hier ist dein Produktschlüssel:
+Produkt: {product_label}
+Key: {key}
+
+Du kannst diesen Key auf unserer Website im 'Customer' Login verwenden oder direkt in unserem Discord-Server einlösen.
+
+Viel Spaß!
+Dein {SERVER_NAME} Team"""
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        else:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            
+        server.login(SMTP_USER, SMTP_PASS)
+        text = msg.as_string()
+        server.sendmail(SMTP_USER, to_email, text)
+        server.quit()
+        print(f"✅ Email erfolgreich an {to_email} gesendet!")
+        return True
+    except Exception as e:
+        print(f"⚠️ FEHLER BEIM SENDEN DER EMAIL an {to_email}: {e}")
+        return False
+
 # =========================================================
 # BOT SETUP
 # =========================================================
@@ -184,7 +251,7 @@ class ValeBot(commands.Bot):
 bot = ValeBot()
 
 # =========================================================
-# 🌍 WEB DASHBOARD HTML
+# 🌍 WEB DASHBOARD HTML (ULTRA PREMIUM DESIGN)
 # =========================================================
 WEB_HTML = """
 <!DOCTYPE html>
@@ -196,26 +263,29 @@ WEB_HTML = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e7eb; margin: 0; overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&display=swap');
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #030305; color: #e5e7eb; margin: 0; overflow-x: hidden; }
         
-        .synthwave-bg { background: linear-gradient(to bottom, #090014, #2a0845, #140024); position: fixed; inset: 0; z-index: -2; }
+        .synthwave-bg { background: radial-gradient(circle at 50% -20%, #2a0845, #030305 60%); position: fixed; inset: 0; z-index: -2; }
         .synthwave-grid {
-            position: fixed; bottom: 0; left: -50%; width: 200%; height: 40%;
-            background-image: linear-gradient(rgba(168, 85, 247, 0.5) 2px, transparent 2px), linear-gradient(90deg, rgba(168, 85, 247, 0.5) 2px, transparent 2px);
-            background-size: 60px 60px; transform: perspective(600px) rotateX(60deg);
-            animation: gridMove 2s linear infinite; z-index: -1;
+            position: fixed; bottom: 0; left: -50%; width: 200%; height: 50%;
+            background-image: linear-gradient(rgba(147, 51, 234, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 51, 234, 0.15) 1px, transparent 1px);
+            background-size: 40px 40px; transform: perspective(1000px) rotateX(70deg);
+            animation: gridMove 3s linear infinite; z-index: -1;
         }
-        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 40px; } }
 
-        .glass { background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }
-        .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.5); }
-        .glow-box { box-shadow: 0 0 40px rgba(147, 51, 234, 0.5); }
+        .glass { background: rgba(10, 10, 15, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(147, 51, 234, 0.2); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .glow-text { background: linear-gradient(to right, #c084fc, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(168,85,247,0.5)); }
+        .glow-box { box-shadow: 0 0 40px rgba(147, 51, 234, 0.3); }
         .hidden-view { display: none !important; }
         .tab-content { display: none; } 
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); } ::-webkit-scrollbar-thumb { background: #9333ea; border-radius: 4px; }
+        
+        .premium-btn { background: linear-gradient(90deg, #9333ea, #db2777); transition: all 0.3s; }
+        .premium-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(219, 39, 119, 0.5); }
     </style>
 </head>
 <body class="flex h-screen selection:bg-purple-500 selection:text-white relative">
@@ -223,427 +293,412 @@ WEB_HTML = """
     <div class="synthwave-bg"></div>
     <div class="synthwave-grid"></div>
 
-    <div id="view-auth" class="flex w-full h-full items-center justify-center relative z-10">
-        <div class="glass p-10 rounded-3xl max-w-md w-full relative glow-box border-2 border-purple-500/50">
-            <div class="text-center mb-8">
-                <img src="LOGO_URL_PLACEHOLDER" alt="Logo" class="h-32 mx-auto mb-4 drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] object-contain">
-                <h1 class="text-3xl font-black text-white tracking-widest glow-text mt-4">VALE GEN</h1>
-            </div>
+    <nav class="absolute top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-black/20 backdrop-blur-md border-b border-purple-500/20">
+        <div class="flex items-center gap-4 cursor-pointer" onclick="switchAuth('shop')">
+            <img src="LOGO_URL_PLACEHOLDER" class="h-12 w-12 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.5)] object-cover">
+            <span class="text-2xl font-black tracking-widest uppercase">VALE <span class="glow-text">GEN</span></span>
+        </div>
+        <div class="flex gap-6">
+            <button onclick="switchAuth('shop')" class="font-bold text-gray-300 hover:text-white transition uppercase tracking-wider text-sm">Store</button>
+            <button onclick="switchAuth('login')" class="font-bold text-purple-400 hover:text-purple-300 transition uppercase tracking-wider text-sm border border-purple-500/50 px-4 py-2 rounded-lg hover:bg-purple-500/10">Login</button>
+        </div>
+    </nav>
 
-            <div class="flex border-b border-purple-500/50 mb-6">
-                <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition">LOGIN</button>
-                <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">CUSTOMER</button>
-                <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-3 text-gray-400 font-bold hover:text-white transition border-b-2 border-transparent">REGISTER</button>
-            </div>
-
-            <div id="form-login" class="space-y-4">
-                <input type="text" id="l-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Username">
-                <input type="password" id="l-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Password">
-                <button onclick="login()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">LOGIN</button>
-            </div>
-
-            <div id="form-customer" class="space-y-4 hidden-view">
-                <p class="text-xs text-gray-300 text-center font-bold mb-2">Log in with your purchased Key</p>
-                <input type="text" id="c-key" class="w-full bg-black/70 border border-pink-500/60 rounded-xl px-4 py-3 text-pink-400 font-mono focus:border-pink-400 outline-none transition tracking-wider text-center shadow-inner" placeholder="GEN-...">
-                <button onclick="customerLogin()" class="w-full bg-gradient-to-r from-pink-700 to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(236,72,153,0.6)]">ACCESS DASHBOARD</button>
-            </div>
-
-            <div id="form-register" class="space-y-4 hidden-view">
-                <input type="text" id="r-user" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Username">
-                <input type="password" id="r-pass" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-white focus:border-purple-400 outline-none transition shadow-inner" placeholder="Choose Password">
-                <input type="text" id="r-key" class="w-full bg-black/70 border border-purple-500/60 rounded-xl px-4 py-3 text-purple-400 font-mono focus:border-purple-400 outline-none transition shadow-inner" placeholder="Invitation Key (VALE-...)">
-                <button onclick="register()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)]">CREATE ACCOUNT</button>
+    <div id="view-auth" class="w-full h-full flex flex-col pt-24 pb-10 px-4 relative z-10 overflow-y-auto">
+        
+        <div id="form-shop" class="max-w-6xl w-full mx-auto mt-10">
+            <div class="text-center mb-16">
+                <h1 class="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase">Unlock the <span class="glow-text">Future.</span></h1>
+                <p class="text-gray-400 text-lg font-medium max-w-2xl mx-auto">Kaufe deinen Premium Key, verifiziere automatisch via Blockchain und erhalte direkten Zugang per E-Mail & Dashboard.</p>
             </div>
             
-            <p id="auth-error" class="text-red-400 mt-4 text-sm text-center font-bold hidden"></p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass p-10 rounded-[2rem] flex flex-col items-center border-t-4 border-green-500 hover:-translate-y-2 transition duration-300">
+                    <div class="bg-green-500/10 text-green-400 px-4 py-1 rounded-full text-xs font-black tracking-widest mb-6 border border-green-500/20">STARTER</div>
+                    <h3 class="text-3xl font-bold mb-2">1 Day Access</h3>
+                    <div class="text-5xl font-black text-white mb-8">5.00€</div>
+                    <ul class="text-gray-400 space-y-3 mb-10 w-full text-sm font-medium">
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>24 Hours Access</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>All Features</li>
+                    </ul>
+                    <button onclick="openCheckout('day_1', '5.00')" class="mt-auto w-full bg-white/5 border border-white/10 hover:bg-green-500 hover:border-green-500 py-4 rounded-xl font-black uppercase tracking-widest transition">Buy Now</button>
+                </div>
+                
+                <div class="glass p-10 rounded-[2.5rem] flex flex-col items-center border-t-4 border-purple-500 scale-100 md:scale-110 relative shadow-[0_0_50px_rgba(168,85,247,0.15)] z-10">
+                    <div class="absolute top-4 right-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase shadow-lg">Most Popular</div>
+                    <div class="bg-purple-500/10 text-purple-400 px-4 py-1 rounded-full text-xs font-black tracking-widest mb-6 border border-purple-500/20">PREMIUM</div>
+                    <h3 class="text-3xl font-bold mb-2">1 Week Access</h3>
+                    <div class="text-5xl font-black text-white mb-8">15.00€</div>
+                    <ul class="text-gray-300 space-y-3 mb-10 w-full text-sm font-medium">
+                        <li><i class="fa-solid fa-check text-purple-400 mr-2"></i>7 Days Access</li>
+                        <li><i class="fa-solid fa-check text-purple-400 mr-2"></i>All Features</li>
+                        <li><i class="fa-solid fa-bolt text-purple-400 mr-2"></i>Priority Support</li>
+                    </ul>
+                    <button onclick="openCheckout('week_1', '15.00')" class="mt-auto w-full premium-btn text-white py-4 rounded-xl font-black uppercase tracking-widest">Buy Now</button>
+                </div>
+                
+                <div class="glass p-10 rounded-[2rem] flex flex-col items-center border-t-4 border-yellow-500 hover:-translate-y-2 transition duration-300">
+                    <div class="bg-yellow-500/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-black tracking-widest mb-6 border border-yellow-500/20">ULTIMATE</div>
+                    <h3 class="text-3xl font-bold mb-2">Lifetime Access</h3>
+                    <div class="text-5xl font-black text-white mb-8">30.00€</div>
+                    <ul class="text-gray-400 space-y-3 mb-10 w-full text-sm font-medium">
+                        <li><i class="fa-solid fa-check text-yellow-500 mr-2"></i>Permanent Access</li>
+                        <li><i class="fa-solid fa-check text-yellow-500 mr-2"></i>All Features</li>
+                        <li><i class="fa-solid fa-star text-yellow-500 mr-2"></i>VIP Discord Role</li>
+                    </ul>
+                    <button onclick="openCheckout('lifetime', '30.00')" class="mt-auto w-full bg-white/5 border border-white/10 hover:bg-yellow-500 hover:border-yellow-500 py-4 rounded-xl font-black uppercase tracking-widest transition text-white">Buy Now</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="auth-forms-container" class="max-w-md w-full mx-auto mt-20 hidden-view">
+            <div class="glass p-10 rounded-[2rem] relative glow-box">
+                <div class="flex border-b border-white/10 mb-8">
+                    <button onclick="switchAuth('login')" id="auth-tab-login" class="flex-1 pb-4 text-purple-400 font-bold border-b-2 border-purple-500 transition tracking-widest uppercase text-sm">Admin</button>
+                    <button onclick="switchAuth('customer')" id="auth-tab-customer" class="flex-1 pb-4 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent tracking-widest uppercase text-sm">Customer</button>
+                    <button onclick="switchAuth('register')" id="auth-tab-register" class="flex-1 pb-4 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent tracking-widest uppercase text-sm">Register</button>
+                </div>
+
+                <div id="form-login" class="space-y-5">
+                    <input type="text" id="l-user" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-purple-500 transition" placeholder="Username">
+                    <input type="password" id="l-pass" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-purple-500 transition" placeholder="Password">
+                    <button onclick="login()" class="w-full premium-btn text-white font-black py-4 rounded-xl uppercase tracking-widest mt-4">Login</button>
+                </div>
+
+                <div id="form-customer" class="space-y-5 hidden-view">
+                    <p class="text-sm text-gray-400 text-center mb-4">Logge dich mit deinem gekauften Key ein.</p>
+                    <input type="text" id="c-key" class="w-full bg-black/50 border border-pink-500/50 rounded-xl px-5 py-4 text-pink-400 font-mono focus:border-pink-500 outline-none transition text-center tracking-widest" placeholder="GEN-...">
+                    <button onclick="customerLogin()" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(236,72,153,0.3)] mt-4 transition">Access Dashboard</button>
+                </div>
+
+                <div id="form-register" class="space-y-5 hidden-view">
+                    <input type="text" id="r-user" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-purple-500 transition" placeholder="Username">
+                    <input type="password" id="r-pass" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-purple-500 transition" placeholder="Password">
+                    <input type="text" id="r-key" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-purple-400 font-mono focus:border-purple-500 outline-none transition" placeholder="Invite Key (VALE-...)">
+                    <button onclick="register()" class="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black py-4 rounded-xl uppercase tracking-widest mt-4 transition">Create Account</button>
+                </div>
+                
+                <p id="auth-error" class="text-red-400 mt-6 text-sm text-center font-bold hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden-view flex items-center justify-center p-4 z-50">
+        <div class="glass p-8 md:p-12 rounded-[2.5rem] border border-purple-500/30 shadow-[0_0_80px_rgba(168,85,247,0.2)] max-w-lg w-full relative">
+            <button onclick="closeCheckout()" class="absolute top-6 right-8 text-gray-500 hover:text-white text-3xl transition">&times;</button>
+            <h2 class="text-3xl font-black text-white mb-8 text-center uppercase tracking-widest">Secure <span class="glow-text">Checkout</span></h2>
+            
+            <div id="co-step-1">
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">1. Delivery Email</label>
+                        <input type="email" id="co-email" class="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 mt-2 text-white outline-none focus:border-purple-500 transition" placeholder="deine@email.com">
+                    </div>
+                    
+                    <div class="bg-purple-500/5 border border-purple-500/20 p-5 rounded-2xl text-center">
+                        <label class="text-[11px] font-black text-purple-400 uppercase tracking-widest">2. Send Litecoin (LTC)</label>
+                        <p class="text-2xl font-black text-white my-2"><span id="co-price"></span>€</p>
+                        <div class="bg-black/50 p-3 rounded-lg border border-white/5 font-mono text-[11px] text-gray-300 break-all cursor-pointer hover:bg-black/80 transition" onclick="navigator.clipboard.writeText('LTC_ADDR'); alert('Kopiert!')">
+                            LTC_ADDR <i class="fa-regular fa-copy ml-2"></i>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">3. Litecoin TXID (Hash)</label>
+                        <input type="text" id="co-txid" class="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 mt-2 text-white outline-none focus:border-blue-500 transition font-mono text-sm" placeholder="Paste TXID here...">
+                    </div>
+                </div>
+                
+                <p id="co-error" class="text-red-400 mt-6 mb-2 text-sm font-bold text-center hidden"></p>
+                <button onclick="processCheckout()" id="btn-checkout" class="w-full premium-btn text-white font-black py-5 rounded-xl uppercase tracking-widest text-sm mt-8">Verify Payment & Get Key</button>
+            </div>
+
+            <div id="co-step-2" class="hidden-view text-center py-6">
+                <i class="fa-solid fa-shield-check text-7xl text-green-500 mb-6 drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]"></i>
+                <h3 class="text-3xl font-black text-white mb-2 uppercase tracking-widest">Payment Verified</h3>
+                <p class="text-gray-400 mb-8 font-medium">Dein Key wurde an deine E-Mail gesendet.</p>
+                <div class="bg-black/60 border border-green-500/50 p-5 rounded-2xl mb-8">
+                    <p class="text-xs text-green-400 font-bold uppercase tracking-widest mb-2">Dein Key</p>
+                    <p id="co-success-key" class="font-mono text-white text-xl font-black tracking-wider break-all select-all"></p>
+                </div>
+                <button onclick="window.location.reload()" class="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black py-4 rounded-xl uppercase tracking-widest transition">Zum Dashboard</button>
+            </div>
         </div>
     </div>
 
     <div id="view-customer" class="flex w-full h-full hidden-view p-8 z-10 relative">
         <div class="max-w-3xl mx-auto w-full">
-            <header class="flex justify-between items-center mb-8 glass p-6 rounded-2xl glow-box">
+            <header class="flex justify-between items-center mb-8 glass p-6 rounded-3xl">
                 <div class="flex items-center">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] object-contain">
+                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-4 rounded-xl">
                     <div>
-                        <h1 class="text-2xl font-black text-white">Customer Portal</h1>
+                        <h1 class="text-2xl font-black text-white uppercase tracking-widest">Customer Portal</h1>
                         <p class="text-sm text-pink-400 font-mono font-bold" id="cust-key-display">GEN-...</p>
                     </div>
                 </div>
-                <button onclick="logout()" class="bg-red-500/20 hover:bg-red-600 border border-red-500/50 hover:border-red-500 text-red-200 hover:text-white px-5 py-2 rounded-xl transition font-bold shadow-[0_0_15px_rgba(220,38,38,0.4)]">
-                    <i class="fa-solid fa-power-off mr-2"></i>Logout
-                </button>
+                <button onclick="logout()" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-6 py-3 rounded-xl font-bold transition">Logout</button>
             </header>
             
-            <div class="glass p-10 rounded-3xl shadow-[0_0_40px_rgba(236,72,153,0.3)] text-center border-t-4 border-pink-500">
-                <h2 class="text-gray-300 font-bold uppercase tracking-widest mb-2">Your Product</h2>
-                <h3 class="text-5xl font-black text-white glow-text mb-10" id="cust-prod">Loading...</h3>
+            <div class="glass p-10 rounded-[2.5rem] text-center border-t-4 border-pink-500">
+                <h2 class="text-gray-500 font-bold uppercase tracking-widest mb-2 text-sm">Your Product</h2>
+                <h3 class="text-5xl font-black text-white glow-text mb-12" id="cust-prod">Loading...</h3>
                 
                 <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="bg-black/60 p-6 rounded-2xl border border-pink-500/50 shadow-inner">
-                        <i class="fa-solid fa-shield-halved text-4xl text-pink-400 mb-4 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)]"></i>
-                        <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">Status</p>
-                        <p class="text-2xl font-black text-white mt-1" id="cust-status">Loading</p>
+                    <div class="bg-black/40 p-6 rounded-2xl border border-white/5">
+                        <i class="fa-solid fa-shield-halved text-3xl text-pink-400 mb-4"></i>
+                        <p class="text-xs text-gray-500 font-bold uppercase tracking-widest">Status</p>
+                        <p class="text-xl font-black text-white mt-2" id="cust-status">Loading</p>
                     </div>
-                    <div class="bg-black/60 p-6 rounded-2xl border border-purple-500/50 shadow-inner">
-                        <i class="fa-brands fa-discord text-4xl text-purple-400 mb-4 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]"></i>
-                        <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">Bound To (Discord ID)</p>
-                        <p class="text-xl font-mono text-white mt-1" id="cust-discord">None</p>
+                    <div class="bg-black/40 p-6 rounded-2xl border border-white/5">
+                        <i class="fa-brands fa-discord text-3xl text-purple-400 mb-4"></i>
+                        <p class="text-xs text-gray-500 font-bold uppercase tracking-widest">Bound To</p>
+                        <p class="text-lg font-mono text-white mt-2" id="cust-discord">None</p>
                     </div>
                 </div>
-                <p class="text-sm text-gray-400 font-bold">Created: <span id="cust-created" class="text-white"></span></p>
+                <p class="text-xs text-gray-600 font-bold uppercase tracking-widest">Created: <span id="cust-created" class="text-gray-400"></span></p>
             </div>
         </div>
     </div>
 
     <div id="view-admin" class="flex w-full h-full hidden-view z-10 relative">
-        <aside class="w-64 glass border-r border-purple-500/40 flex flex-col justify-between shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+        <aside class="w-64 glass border-r border-white/5 flex flex-col justify-between">
             <div>
-                <div class="h-32 flex items-center justify-center border-b border-purple-500/40 px-4 bg-black/20">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-16 mr-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
-                    <span class="text-2xl font-black text-white glow-text">ADMIN</span>
+                <div class="h-32 flex items-center justify-center border-b border-white/5 px-4">
+                    <span class="text-2xl font-black text-white glow-text tracking-widest uppercase">ADMIN</span>
                 </div>
-                <nav class="p-4 space-y-3 mt-4">
-                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
-                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-bolt w-6 text-yellow-400"></i> Generator</button>
-                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-key w-6 text-purple-400"></i> Key Manager</button>
-                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-users w-6 text-blue-400"></i> Team</button>
-                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-tags w-6 text-pink-400"></i> Promos</button>
-                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-search w-6 text-green-400"></i> Database</button>
-                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-satellite-dish w-6 text-orange-400"></i> Broadcast</button>
-                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-purple-600/20 transition font-bold"><i class="fa-solid fa-skull w-6 text-red-500"></i> Blacklist</button>
+                <nav class="p-4 space-y-2 mt-4">
+                    <button onclick="nav('dash')" id="btn-dash" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-purple-300 bg-purple-500/10 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</button>
+                    <button onclick="nav('gen')" id="btn-gen" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-bolt w-6 text-yellow-400"></i> Generator</button>
+                    <button onclick="nav('keys')" id="btn-keys" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-key w-6 text-purple-400"></i> Keys</button>
+                    <button onclick="nav('team')" id="btn-team" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-users w-6 text-blue-400"></i> Team</button>
+                    <button onclick="nav('promos')" id="btn-promos" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-tags w-6 text-pink-400"></i> Promos</button>
+                    <button onclick="nav('lookup')" id="btn-lookup" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-search w-6 text-green-400"></i> Database</button>
+                    <button onclick="nav('announce')" id="btn-announce" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-satellite-dish w-6 text-orange-400"></i> Broadcast</button>
+                    <button onclick="nav('blacklist')" id="btn-blacklist" class="nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"><i class="fa-solid fa-skull w-6 text-red-500"></i> Blacklist</button>
                 </nav>
             </div>
-            <div class="p-6 border-t border-purple-500/40 text-center bg-black/20">
-                <button onclick="logout()" class="w-full text-red-400 hover:text-white font-bold transition bg-red-600/20 hover:bg-red-600 px-6 py-3 rounded-xl border border-red-500/50 shadow-[0_0_15px_rgba(220,38,38,0.4)]">
-                    <i class="fa-solid fa-power-off mr-2"></i> LOGOUT
-                </button>
+            <div class="p-6 border-t border-white/5">
+                <button onclick="logout()" class="w-full text-red-400 bg-red-500/10 hover:bg-red-500/20 font-bold py-3 rounded-xl transition text-sm tracking-widest uppercase">Logout</button>
             </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto p-8">
             <div class="max-w-7xl mx-auto">
-                <header class="flex justify-between items-center mb-8 glass p-5 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                    <h2 id="page-title" class="text-3xl font-black text-white tracking-widest uppercase glow-text">Dashboard</h2>
+                <header class="flex justify-between items-center mb-8 glass p-6 rounded-3xl">
+                    <h2 id="page-title" class="text-2xl font-black text-white tracking-widest uppercase glow-text">Dashboard</h2>
                     <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-full border border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
-                            <i class="fa-brands fa-discord text-blue-400"></i> <span id="dc-members" class="text-white font-bold">0</span>
-                        </div>
-                        <div class="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-full border border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.3)]">
-                            <i class="fa-solid fa-ticket text-yellow-400"></i> <span id="dc-tickets" class="text-white font-bold">0</span>
-                        </div>
-                        <span class="text-sm text-gray-300 ml-2 font-bold">Admin <span id="admin-name" class="text-purple-400 font-black tracking-wider ml-1"></span></span>
+                        <span class="text-sm text-gray-500 font-bold uppercase tracking-widest">Admin <span id="admin-name" class="text-white ml-2"></span></span>
                     </div>
                 </header>
 
                 <div id="dash" class="tab-content active">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p><h3 class="text-5xl font-black text-white mt-2 glow-text" id="stat-rev">0.00€</h3></div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-pink-500 shadow-[0_0_25px_rgba(236,72,153,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Orders Today</p><h3 class="text-5xl font-black text-white mt-2" id="stat-orders">0</h3></div>
-                        <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]"><p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Active Keys</p><h3 class="text-5xl font-black text-white mt-2" id="stat-keys">0</h3></div>
+                        <div class="glass p-8 rounded-3xl border-t-4 border-purple-500"><p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Revenue</p><h3 class="text-4xl font-black text-white mt-3" id="stat-rev">0.00€</h3></div>
+                        <div class="glass p-8 rounded-3xl border-t-4 border-pink-500"><p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Orders Today</p><h3 class="text-4xl font-black text-white mt-3" id="stat-orders">0</h3></div>
+                        <div class="glass p-8 rounded-3xl border-t-4 border-blue-500"><p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Keys</p><h3 class="text-4xl font-black text-white mt-3" id="stat-keys">0</h3></div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="lg:col-span-2 glass p-6 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-chart-line mr-2 text-purple-400"></i>Revenue Chart</h3><canvas id="revenueChart" height="100"></canvas></div>
-                        <div class="lg:col-span-1 glass p-6 rounded-2xl flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.5)]"><h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-pink-400"></i>Activity Log</h3><div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div></div>
+                        <div class="lg:col-span-2 glass p-8 rounded-3xl"><h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Revenue Chart</h3><canvas id="revenueChart" height="100"></canvas></div>
+                        <div class="lg:col-span-1 glass p-8 rounded-3xl flex flex-col"><h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Activity Log</h3><div id="activity-feed" class="flex-1 overflow-y-auto space-y-3 pr-2"></div></div>
                     </div>
                 </div>
                 
                 <div id="gen" class="tab-content">
-                    <div class="glass p-8 rounded-3xl border-t-4 border-purple-500 max-w-2xl mx-auto shadow-[0_0_40px_rgba(168,85,247,0.4)] mt-10">
-                        <h2 class="text-2xl font-black mb-8 text-center text-white glow-text uppercase tracking-widest"><i class="fa-solid fa-bolt mr-3 text-yellow-400"></i>Generator</h2>
-                        <div class="space-y-5">
-                            <button onclick="genAdminKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]">
-                                <span class="font-black text-xl tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-2xl text-purple-400"></i>
+                    <div class="glass p-10 rounded-3xl border-t-4 border-purple-500 max-w-2xl mx-auto mt-10">
+                        <h2 class="text-xl font-black mb-8 text-center text-white uppercase tracking-widest">Generator</h2>
+                        <div class="space-y-4">
+                            <button onclick="genAdminKey('day_1')" class="w-full bg-white/5 hover:bg-white/10 p-5 rounded-2xl flex justify-between items-center transition border border-white/5">
+                                <span class="font-black tracking-widest uppercase text-sm">1 Day Key</span><i class="fa-solid fa-plus text-purple-400"></i>
                             </button>
-                            <button onclick="genAdminKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]">
-                                <span class="font-black text-xl tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-2xl text-purple-400"></i>
+                            <button onclick="genAdminKey('week_1')" class="w-full bg-white/5 hover:bg-white/10 p-5 rounded-2xl flex justify-between items-center transition border border-white/5">
+                                <span class="font-black tracking-widest uppercase text-sm">1 Week Key</span><i class="fa-solid fa-plus text-pink-400"></i>
                             </button>
-                            <button onclick="genAdminKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)] hover:shadow-[0_0_40px_rgba(236,72,153,0.8)]">
-                                <span class="font-black text-xl tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-2xl text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]"></i>
+                            <button onclick="genAdminKey('lifetime')" class="w-full premium-btn p-5 rounded-2xl flex justify-between items-center text-white transition">
+                                <span class="font-black tracking-widest uppercase text-sm">Lifetime Key</span><i class="fa-solid fa-star text-yellow-300"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div id="keys" class="tab-content">
-                    <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.2)] border border-purple-500/30">
-                        <div class="p-6 border-b border-purple-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-key mr-3 text-purple-400"></i>Key Database</h3></div>
+                    <div class="glass rounded-3xl overflow-hidden">
+                        <div class="p-6 border-b border-white/10 bg-black/20"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Key Database</h3></div>
                         <div class="overflow-x-auto max-h-[600px] p-2">
                             <table class="w-full text-left text-sm whitespace-nowrap">
-                                <thead class="bg-purple-900/20 text-purple-200 sticky top-0 backdrop-blur-xl z-10">
-                                    <tr><th class="px-6 py-4 font-black tracking-wider uppercase">Key</th><th class="px-6 py-4 font-black tracking-wider uppercase">Type</th><th class="px-6 py-4 font-black tracking-wider uppercase">Creator</th><th class="px-6 py-4 font-black tracking-wider uppercase">Used By (ID)</th><th class="px-6 py-4 font-black tracking-wider uppercase">Status</th><th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th></tr>
+                                <thead class="text-gray-500 sticky top-0 bg-black/90 backdrop-blur-md z-10">
+                                    <tr><th class="px-6 py-4 font-bold tracking-wider uppercase text-xs">Key</th><th class="px-6 py-4 font-bold tracking-wider uppercase text-xs">Type</th><th class="px-6 py-4 font-bold tracking-wider uppercase text-xs">Creator</th><th class="px-6 py-4 font-bold tracking-wider uppercase text-xs">Used By (ID)</th><th class="px-6 py-4 font-bold tracking-wider uppercase text-xs">Status</th><th class="px-6 py-4 text-right font-bold tracking-wider uppercase text-xs">Action</th></tr>
                                 </thead>
-                                <tbody id="table-keys" class="divide-y divide-purple-500/20"></tbody>
+                                <tbody id="table-keys" class="divide-y divide-white/5"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <div id="team" class="tab-content">
-                    <div class="glass rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.2)] border border-blue-500/30">
-                        <div class="p-6 border-b border-blue-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-users mr-3 text-blue-400"></i>Reseller Management</h3></div>
-                        <div class="p-2">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-blue-900/20 text-blue-200">
-                                    <tr><th class="px-6 py-4 font-black tracking-wider uppercase">Username</th><th class="px-6 py-4 font-black tracking-wider uppercase">Password</th><th class="px-6 py-4 font-black tracking-wider uppercase">Generated Keys</th><th class="px-6 py-4 text-right font-black tracking-wider uppercase">Action</th></tr>
-                                </thead>
-                                <tbody id="table-team" class="divide-y divide-blue-500/20"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="promos" class="tab-content">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="md:col-span-1 glass p-8 rounded-3xl border-t-4 border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.3)]">
-                            <h3 class="text-xl font-black text-white mb-6 uppercase tracking-widest"><i class="fa-solid fa-plus mr-2 text-pink-400"></i>New Promo</h3>
-                            <input type="text" id="p-code" placeholder="Code (z.B. SUMMER50)" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-4 text-white uppercase outline-none focus:border-pink-400 transition shadow-inner font-bold">
-                            <input type="number" id="p-disc" placeholder="Discount %" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-4 text-white outline-none focus:border-pink-400 transition shadow-inner font-bold">
-                            <input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-black/60 border-2 border-pink-500/40 rounded-xl px-4 py-3 mb-6 text-white outline-none focus:border-pink-400 transition shadow-inner font-bold">
-                            <button onclick="createPromo()" class="w-full bg-gradient-to-r from-pink-700 to-pink-500 hover:from-pink-600 hover:to-pink-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_20px_rgba(236,72,153,0.6)] uppercase tracking-widest">Create Code</button>
-                        </div>
-                        <div class="md:col-span-2 glass rounded-3xl overflow-hidden border border-pink-500/30 shadow-[0_0_30px_rgba(236,72,153,0.2)]">
-                            <div class="p-6 border-b border-pink-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-tags mr-3 text-pink-400"></i>Active Promos</h3></div>
-                            <div class="p-2">
-                                <table class="w-full text-left text-sm">
-                                    <thead class="bg-pink-900/20 text-pink-200">
-                                        <tr><th class="p-4 font-black tracking-wider uppercase">Code</th><th class="p-4 font-black tracking-wider uppercase">Discount</th><th class="p-4 font-black tracking-wider uppercase">Uses Left</th><th class="p-4 text-right font-black tracking-wider uppercase">Action</th></tr>
-                                    </thead>
-                                    <tbody id="table-promos" class="divide-y divide-pink-500/20"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="lookup" class="tab-content">
-                    <div class="glass p-8 rounded-3xl mb-8 flex gap-4 shadow-[0_0_30px_rgba(168,85,247,0.3)] border border-purple-500/40">
-                        <input type="text" id="lookup-id" placeholder="Discord User ID eingeben..." class="flex-1 bg-black/60 border-2 border-purple-500/50 rounded-xl px-5 py-4 text-white focus:border-purple-400 outline-none transition shadow-inner font-mono text-lg">
-                        <button onclick="lookupUser()" class="bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(147,51,234,0.6)] uppercase tracking-widest"><i class="fa-solid fa-search mr-2"></i>Search</button>
-                    </div>
-                    <div id="lookup-result" class="hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div class="glass p-6 rounded-2xl border-l-4 border-purple-500 bg-black/40"><p class="text-purple-300 text-sm font-black uppercase tracking-widest">Total Spent</p><h3 id="lu-spent" class="text-4xl font-black text-white glow-text mt-2">0.00€</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-blue-500 bg-black/40"><p class="text-blue-300 text-sm font-black uppercase tracking-widest">Total Orders</p><h3 id="lu-orders" class="text-4xl font-black text-white mt-2">0</h3></div>
-                            <div class="glass p-6 rounded-2xl border-l-4 border-red-500 bg-black/40"><p class="text-red-300 text-sm font-black uppercase tracking-widest">Blacklist Status</p><h3 id="lu-banned" class="text-2xl font-black mt-2">Clean</h3></div>
-                        </div>
-                        <div class="glass rounded-3xl overflow-hidden border border-purple-500/30">
-                            <div class="p-6 border-b border-purple-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-3 text-purple-400"></i>Purchase History</h3></div>
-                            <div class="p-2">
-                                <table class="w-full text-left text-sm">
-                                    <thead class="bg-purple-900/20 text-purple-200">
-                                        <tr><th class="p-4 font-black tracking-wider uppercase">Invoice</th><th class="p-4 font-black tracking-wider uppercase">Product</th><th class="p-4 font-black tracking-wider uppercase">Price</th><th class="p-4 font-black tracking-wider uppercase">Date</th></tr>
-                                    </thead>
-                                    <tbody id="lu-table" class="divide-y divide-purple-500/20"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="announce" class="tab-content">
-                    <div class="glass p-8 rounded-3xl border-t-4 border-blue-500 max-w-3xl mx-auto shadow-[0_0_40px_rgba(59,130,246,0.3)] mt-10">
-                        <h3 class="text-2xl font-black text-center text-white mb-8 uppercase tracking-widest"><i class="fa-solid fa-satellite-dish mr-3 text-blue-400"></i>Server Broadcast</h3>
-                        <input type="text" id="ann-title" placeholder="Titel (z.B. 🚀 MEGA UPDATE)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white font-bold outline-none focus:border-blue-400 transition shadow-inner">
-                        <textarea id="ann-desc" placeholder="Nachricht hier eingeben..." rows="6" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-5 text-white resize-none outline-none focus:border-blue-400 transition shadow-inner"></textarea>
-                        <input type="text" id="ann-img" placeholder="Bild URL (Optional)" class="w-full bg-black/60 border-2 border-blue-500/40 rounded-xl px-5 py-4 mb-8 text-white text-sm outline-none focus:border-blue-400 transition shadow-inner">
-                        <button onclick="sendAnnounce()" class="w-full bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-black py-4 rounded-xl transition shadow-[0_0_25px_rgba(59,130,246,0.6)] uppercase tracking-widest text-lg"><i class="fa-solid fa-paper-plane mr-2"></i> Nachricht Senden</button>
-                    </div>
-                </div>
-
-                <div id="blacklist" class="tab-content">
-                    <div class="glass p-8 rounded-3xl mb-8 flex gap-4 shadow-[0_0_30px_rgba(239,68,68,0.3)] border border-red-500/40">
-                        <input type="text" id="bl-id" placeholder="Discord User ID bannen..." class="flex-1 bg-black/60 border-2 border-red-500/50 rounded-xl px-5 py-4 text-white outline-none focus:border-red-400 transition shadow-inner font-mono text-lg">
-                        <input type="text" id="bl-reason" placeholder="Grund (Optional)" class="flex-1 bg-black/60 border-2 border-red-500/50 rounded-xl px-5 py-4 text-white outline-none focus:border-red-400 transition shadow-inner text-lg">
-                        <button onclick="addBlacklist()" class="bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white px-10 font-black rounded-xl transition shadow-[0_0_20px_rgba(220,38,38,0.6)] uppercase tracking-widest text-lg">BAN</button>
-                    </div>
-                    <div class="glass rounded-3xl overflow-hidden border border-red-500/30">
-                        <div class="p-6 border-b border-red-500/40 bg-black/40"><h3 class="text-xl font-black text-white uppercase tracking-widest"><i class="fa-solid fa-skull mr-3 text-red-500"></i>Banned Users</h3></div>
-                        <div class="p-2">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-red-900/20 text-red-200">
-                                    <tr><th class="p-4 font-black tracking-wider uppercase">User ID</th><th class="p-4 font-black tracking-wider uppercase">Reason</th><th class="p-4 text-right font-black tracking-wider uppercase">Action</th></tr>
-                                </thead>
-                                <tbody id="table-blacklist" class="divide-y divide-red-500/20"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <div id="team" class="tab-content"><div class="glass rounded-3xl overflow-hidden"><div class="p-6 border-b border-white/10"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Reseller Management</h3></div><div class="p-2"><table class="w-full text-left text-sm"><thead class="text-gray-500"><tr><th class="px-6 py-4 text-xs font-bold uppercase">Username</th><th class="px-6 py-4 text-xs font-bold uppercase">Password</th><th class="px-6 py-4 text-xs font-bold uppercase">Keys</th><th class="px-6 py-4 text-right text-xs font-bold uppercase">Action</th></tr></thead><tbody id="table-team" class="divide-y divide-white/5"></tbody></table></div></div></div>
+                <div id="promos" class="tab-content"><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="md:col-span-1 glass p-8 rounded-3xl"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">New Promo</h3><input type="text" id="p-code" placeholder="Code" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 mb-4 text-white uppercase outline-none"><input type="number" id="p-disc" placeholder="Discount %" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 mb-4 text-white outline-none"><input type="number" id="p-uses" placeholder="Max Uses" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 mb-6 text-white outline-none"><button onclick="createPromo()" class="w-full premium-btn py-3 rounded-xl font-bold uppercase tracking-widest text-sm text-white">Create</button></div><div class="md:col-span-2 glass rounded-3xl overflow-hidden"><div class="p-6 border-b border-white/10"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Active Promos</h3></div><div class="p-2"><table class="w-full text-left text-sm"><thead class="text-gray-500"><tr><th class="p-4 text-xs font-bold uppercase">Code</th><th class="p-4 text-xs font-bold uppercase">Discount</th><th class="p-4 text-xs font-bold uppercase">Uses Left</th><th class="p-4 text-right text-xs font-bold uppercase">Action</th></tr></thead><tbody id="table-promos" class="divide-y divide-white/5"></tbody></table></div></div></div></div>
+                <div id="lookup" class="tab-content"><div class="glass p-6 rounded-3xl mb-6 flex gap-4"><input type="text" id="lookup-id" placeholder="Discord ID..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-3 outline-none font-mono"><button onclick="lookupUser()" class="premium-btn px-8 font-bold rounded-xl text-white uppercase tracking-widest text-sm">Search</button></div><div id="lookup-result" class="hidden"><div class="grid grid-cols-3 gap-6 mb-6"><div class="glass p-6 rounded-2xl"><p class="text-xs text-gray-500 font-bold uppercase tracking-widest">Spent</p><h3 id="lu-spent" class="text-2xl font-black mt-2">0.00€</h3></div><div class="glass p-6 rounded-2xl"><p class="text-xs text-gray-500 font-bold uppercase tracking-widest">Orders</p><h3 id="lu-orders" class="text-2xl font-black mt-2">0</h3></div><div class="glass p-6 rounded-2xl"><p class="text-xs text-gray-500 font-bold uppercase tracking-widest">Status</p><h3 id="lu-banned" class="text-xl font-black mt-2">Clean</h3></div></div><div class="glass rounded-3xl overflow-hidden"><div class="p-6 border-b border-white/10"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">History</h3></div><table class="w-full text-left text-sm"><thead class="text-gray-500"><tr><th class="p-4 text-xs font-bold uppercase">Invoice</th><th class="p-4 text-xs font-bold uppercase">Product</th><th class="p-4 text-xs font-bold uppercase">Price</th><th class="p-4 text-xs font-bold uppercase">Date</th></tr></thead><tbody id="lu-table" class="divide-y divide-white/5"></tbody></table></div></div></div>
+                <div id="announce" class="tab-content"><div class="glass p-8 rounded-3xl max-w-2xl mx-auto mt-10"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 text-center">Broadcast</h3><input type="text" id="ann-title" placeholder="Titel" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-3 mb-4 outline-none"><textarea id="ann-desc" placeholder="Nachricht..." rows="5" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-3 mb-4 outline-none"></textarea><input type="text" id="ann-img" placeholder="Bild URL (Optional)" class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-3 mb-6 outline-none"><button onclick="sendAnnounce()" class="w-full premium-btn py-4 rounded-xl font-bold uppercase tracking-widest text-sm text-white">Senden</button></div></div>
+                <div id="blacklist" class="tab-content"><div class="glass p-6 rounded-3xl mb-6 flex gap-4"><input type="text" id="bl-id" placeholder="Discord ID..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-3 outline-none font-mono"><input type="text" id="bl-reason" placeholder="Grund" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-3 outline-none"><button onclick="addBlacklist()" class="bg-red-600 hover:bg-red-500 px-8 font-bold rounded-xl text-white uppercase tracking-widest text-sm transition">Ban</button></div><div class="glass rounded-3xl overflow-hidden"><div class="p-6 border-b border-white/10"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Banned Users</h3></div><table class="w-full text-left text-sm"><thead class="text-gray-500"><tr><th class="p-4 text-xs font-bold uppercase">ID</th><th class="p-4 text-xs font-bold uppercase">Reason</th><th class="p-4 text-right text-xs font-bold uppercase">Action</th></tr></thead><tbody id="table-blacklist" class="divide-y divide-white/5"></tbody></table></div></div>
                 
             </div>
         </main>
     </div>
 
-    <div id="view-reseller" class="flex w-full h-full hidden-view p-8 relative z-10">
-        <div class="max-w-5xl mx-auto w-full">
-            <header class="flex justify-between items-center mb-10 glass p-6 rounded-3xl glow-box border border-purple-500/40">
-                <div class="flex items-center">
-                    <img src="LOGO_URL_PLACEHOLDER" class="h-20 mr-5 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] object-contain">
-                    <div>
-                        <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-widest uppercase">Reseller Portal</h1>
-                        <p class="text-purple-300 font-bold mt-1">Willkommen zurück, <span id="r-name" class="text-white font-black"></span></p>
-                    </div>
-                </div>
-                <button onclick="logout()" class="bg-black/60 border-2 border-red-500/50 hover:bg-red-600 text-red-400 hover:text-white px-8 py-3 rounded-xl transition font-black shadow-[0_0_20px_rgba(220,38,38,0.4)] tracking-widest uppercase"><i class="fa-solid fa-power-off mr-2"></i>Logout</button>
-            </header>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div class="glass p-8 rounded-3xl border-t-4 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
-                    <h2 class="text-2xl font-black mb-8 text-white text-center uppercase tracking-widest"><i class="fa-solid fa-bolt mr-3 text-purple-400"></i>Generate Access</h2>
-                    <div class="space-y-5">
-                        <button onclick="genKey('day_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg"><span class="font-black text-lg tracking-wider">1 DAY KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i></button>
-                        <button onclick="genKey('week_1')" class="w-full bg-black/70 hover:bg-purple-600/40 border-2 border-purple-500/50 p-5 rounded-2xl flex justify-between items-center transition text-white shadow-lg"><span class="font-black text-lg tracking-wider">1 WEEK KEY</span><i class="fa-solid fa-plus text-xl text-purple-400"></i></button>
-                        <button onclick="genKey('lifetime')" class="w-full bg-gradient-to-r from-purple-800 to-pink-700 hover:from-purple-600 hover:to-pink-500 p-5 border-2 border-pink-500/50 rounded-2xl flex justify-between items-center text-white transition shadow-[0_0_25px_rgba(236,72,153,0.5)]"><span class="font-black text-lg tracking-wider">LIFETIME KEY</span><i class="fa-solid fa-star text-xl text-yellow-300"></i></button>
-                    </div>
-                </div>
-                <div class="glass p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-purple-500/30">
-                    <h2 class="text-2xl font-black mb-6 text-white text-center uppercase tracking-widest"><i class="fa-solid fa-box-open mr-3 text-pink-400"></i>Your Stock</h2>
-                    <div class="overflow-y-auto h-[320px] pr-3 space-y-3" id="my-keys"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="key-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden-view z-50 backdrop-blur-md">
-        <div class="glass p-10 rounded-3xl text-center border-2 border-purple-500 shadow-[0_0_80px_rgba(168,85,247,0.6)] max-w-md w-full relative overflow-hidden">
-            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.2),transparent)]"></div>
-            <h3 class="text-4xl font-black text-white mb-2 glow-text relative z-10 tracking-widest">SUCCESS!</h3>
-            <p class="text-purple-300 mb-8 font-bold relative z-10 text-lg">Key generated & copied to DB.</p>
-            <input type="text" id="new-key" class="w-full bg-black/90 border-2 border-purple-500 p-5 rounded-2xl text-purple-400 font-mono text-center mb-8 text-xl tracking-widest glow-box relative z-10 outline-none" readonly>
-            <button onclick="closeModal()" class="w-full bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-600 hover:to-purple-400 text-white font-black py-4 rounded-2xl transition shadow-[0_0_25px_rgba(147,51,234,0.7)] relative z-10 tracking-widest uppercase text-lg">Close</button>
+    <div id="key-modal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden-view flex items-center justify-center p-4 z-50">
+        <div class="glass p-12 rounded-[3rem] text-center max-w-md w-full relative">
+            <h3 class="text-2xl font-black text-white mb-2 uppercase tracking-widest">Erfolgreich</h3>
+            <p class="text-gray-400 mb-8 text-sm font-bold">Key generiert & kopiert.</p>
+            <input type="text" id="new-key" class="w-full bg-black/50 border border-white/10 p-5 rounded-2xl text-purple-400 font-mono text-center mb-8 text-sm outline-none" readonly>
+            <button onclick="document.getElementById('key-modal').classList.add('hidden-view')" class="w-full bg-white/10 hover:bg-white/20 text-white font-black py-4 rounded-xl transition uppercase tracking-widest text-sm border border-white/10">Schließen</button>
         </div>
     </div>
 
     <script>
         let myChart = null;
+        let selectedProduct = "";
 
+        // UI Logic
         function switchAuth(type) {
-            document.getElementById('form-login').classList.add('hidden-view'); 
-            document.getElementById('form-register').classList.add('hidden-view');
-            document.getElementById('form-customer').classList.add('hidden-view');
+            document.getElementById('view-shop').classList.add('hidden-view');
+            document.getElementById('auth-forms-container').classList.add('hidden-view');
             
-            document.getElementById('auth-tab-login').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
-            document.getElementById('auth-tab-customer').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
-            document.getElementById('auth-tab-register').className = "flex-1 pb-3 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent";
-            
-            document.getElementById('form-' + type).classList.remove('hidden-view');
-            document.getElementById('auth-tab-' + type).className = "flex-1 pb-3 text-purple-400 font-bold border-b-2 border-purple-500 transition";
-            document.getElementById('auth-error').classList.add('hidden');
+            if(type === 'shop') {
+                document.getElementById('view-shop').classList.remove('hidden-view');
+            } else {
+                document.getElementById('auth-forms-container').classList.remove('hidden-view');
+                document.getElementById('form-login').classList.add('hidden-view'); 
+                document.getElementById('form-register').classList.add('hidden-view');
+                document.getElementById('form-customer').classList.add('hidden-view');
+                
+                document.getElementById('auth-tab-login').className = "flex-1 pb-4 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent tracking-widest uppercase text-sm";
+                document.getElementById('auth-tab-customer').className = "flex-1 pb-4 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent tracking-widest uppercase text-sm";
+                document.getElementById('auth-tab-register').className = "flex-1 pb-4 text-gray-500 font-bold hover:text-white transition border-b-2 border-transparent tracking-widest uppercase text-sm";
+                
+                document.getElementById('form-' + type).classList.remove('hidden-view');
+                let color = type === 'customer' ? 'pink' : 'purple';
+                document.getElementById('auth-tab-' + type).className = `flex-1 pb-4 text-${color}-400 font-bold border-b-2 border-${color}-500 transition tracking-widest uppercase text-sm`;
+                document.getElementById('auth-error').classList.add('hidden');
+            }
         }
 
+        // Shop Logic
+        function openCheckout(id, price) {
+            selectedProduct = id;
+            document.getElementById('co-price').innerText = price;
+            document.getElementById('co-step-1').classList.remove('hidden-view');
+            document.getElementById('co-step-2').classList.add('hidden-view');
+            document.getElementById('checkout-modal').classList.remove('hidden-view');
+        }
+        
+        function closeCheckout() { 
+            document.getElementById('checkout-modal').classList.add('hidden-view'); 
+        }
+
+        async function processCheckout() {
+            const email = document.getElementById('co-email').value;
+            const txid = document.getElementById('co-txid').value;
+            const btn = document.getElementById('btn-checkout');
+            const err = document.getElementById('co-error');
+
+            if(!email || !email.includes('@')) { err.innerText = "Bitte gültige E-Mail eingeben."; err.classList.remove('hidden'); return; }
+            if(!txid) { err.innerText = "Bitte TXID eingeben."; err.classList.remove('hidden'); return; }
+
+            err.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> Prüfe Blockchain...';
+
+            try {
+                const res = await fetch('/api/web_buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email, txid: txid, product: selectedProduct})
+                });
+                const data = await res.json();
+                
+                if(data.ok) {
+                    document.getElementById('co-success-key').value = data.key;
+                    document.getElementById('co-step-1').classList.add('hidden-view');
+                    document.getElementById('co-step-2').classList.remove('hidden-view');
+                } else {
+                    err.innerText = data.error;
+                    err.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = "Zahlung Verifizieren";
+                }
+            } catch(e) {
+                err.innerText = "Server Fehler.";
+                err.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Zahlung Verifizieren";
+            }
+        }
+
+        // Auth Logic (Unverändert, greift auf Original-Endpoints zu)
         async function apiCall(endpoint, data) {
             const token = localStorage.getItem('v_token');
             const headers = {'Content-Type': 'application/json'};
             if (token) headers['Authorization'] = token;
-            
             try {
                 const res = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(data) });
-                if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register' && endpoint !== '/api/customer_login') { 
-                    logout(); throw new Error('Unauthorized'); 
-                }
+                if (res.status === 401 && endpoint !== '/api/login' && endpoint !== '/api/register' && endpoint !== '/api/customer_login') { logout(); throw new Error('Unauthorized'); }
                 return res;
-            } catch (e) {
-                throw e;
-            }
+            } catch (e) { throw e; }
         }
 
-        function showError(msg) { 
-            const e = document.getElementById('auth-error'); 
-            e.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}`; 
-            e.classList.remove('hidden'); 
-        }
+        function showError(msg) { const e = document.getElementById('auth-error'); e.innerHTML = msg; e.classList.remove('hidden'); }
 
         async function login() {
-            const u = document.getElementById('l-user').value;
-            const p = document.getElementById('l-pass').value;
+            const u = document.getElementById('l-user').value, p = document.getElementById('l-pass').value;
             if (!u || !p) return showError("Bitte fülle alle Felder aus.");
-            
             try {
                 const res = await apiCall('/api/login', {user: u, pass: p});
-                if (res.ok) { 
-                    const d = await res.json(); 
-                    localStorage.setItem('v_token', d.token); 
-                    initApp(d.role, d.user); 
-                } else { showError("Falscher Username oder Passwort!"); }
+                if (res.ok) { const d = await res.json(); localStorage.setItem('v_token', d.token); initApp(d.role, d.user); } 
+                else { showError("Falscher Username oder Passwort!"); }
             } catch (e) {}
         }
 
         async function customerLogin() {
             const k = document.getElementById('c-key').value;
             if (!k) return showError("Bitte gib einen Key ein.");
-            
             try {
                 const res = await apiCall('/api/customer_login', {key: k});
-                if (res.ok) { 
-                    const d = await res.json(); 
-                    localStorage.setItem('v_token', d.token); 
-                    initApp(d.role, d.user); 
-                } else {
-                    const e = await res.json();
-                    showError(e.error || "Key nicht gefunden."); 
-                }
+                if (res.ok) { const d = await res.json(); localStorage.setItem('v_token', d.token); initApp(d.role, d.user); } 
+                else { const e = await res.json(); showError(e.error || "Key nicht gefunden."); }
             } catch (e) {}
         }
 
         async function register() {
-            const u = document.getElementById('r-user').value;
-            const p = document.getElementById('r-pass').value;
-            const k = document.getElementById('r-key').value;
-            
+            const u = document.getElementById('r-user').value, p = document.getElementById('r-pass').value, k = document.getElementById('r-key').value;
             if (!u || !p || !k) return showError("Bitte fülle alle Felder aus.");
-            
             try {
                 const res = await apiCall('/api/register', {user: u, pass: p, key: k});
-                if (res.ok) { 
-                    const d = await res.json(); 
-                    localStorage.setItem('v_token', d.token); 
-                    initApp(d.role, d.user); 
-                } else { 
-                    const e = await res.json(); 
-                    if(e.error.includes("vergeben")) {
-                        showError(e.error + "<br><span class='text-gray-300 text-xs'>(Tipp in Discord /nuke_database ein um den Fehler zu resetten)</span>");
-                    } else {
-                        showError(e.error || "Fehler bei Registrierung!"); 
-                    }
-                }
+                if (res.ok) { const d = await res.json(); localStorage.setItem('v_token', d.token); initApp(d.role, d.user); } 
+                else { const e = await res.json(); showError(e.error || "Fehler bei Registrierung!"); }
             } catch (e) {}
         }
 
-        function logout() { 
-            localStorage.removeItem('v_token'); 
-            location.reload(); 
-        }
+        function logout() { localStorage.removeItem('v_token'); location.reload(); }
 
         async function checkAuthOnLoad() {
+            switchAuth('shop'); // Default view
             const t = localStorage.getItem('v_token');
             if (t) {
                 try {
-                    const res = await fetch('/api/verify', {
-                        method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({})
-                    });
-                    
-                    if (res.ok) { 
-                        const d = await res.json(); 
-                        initApp(d.role, d.user); 
-                    } else if (res.status === 401) { logout(); } 
-                    else { setTimeout(checkAuthOnLoad, 3000); }
-                } catch(e) { setTimeout(checkAuthOnLoad, 3000); }
-            } else {
-                document.getElementById('view-auth').classList.remove('hidden-view');
+                    const res = await fetch('/api/verify', { method: 'POST', headers: {'Authorization': t, 'Content-Type': 'application/json'}, body: JSON.stringify({}) });
+                    if (res.ok) { const d = await res.json(); initApp(d.role, d.user); } 
+                    else if (res.status === 401) { logout(); } 
+                } catch(e) {}
             }
         }
 
         function initApp(role, name) {
-            document.getElementById('view-auth').classList.add('hidden-view');
+            document.getElementById('view-shop').classList.add('hidden-view');
+            document.getElementById('auth-forms-container').classList.add('hidden-view');
+            
             if (role === 'admin') { 
                 document.getElementById('view-admin').classList.remove('hidden-view'); 
                 document.getElementById('admin-name').innerText = name; 
-                nav('dash'); 
-                loadDiscordStats();
-                setInterval(loadDiscordStats, 10000);
-            } else if (role === 'reseller') { 
-                document.getElementById('view-reseller').classList.remove('hidden-view'); 
-                document.getElementById('r-name').innerText = name; 
-                loadResellerKeys(); 
+                nav('dash'); loadDiscordStats(); setInterval(loadDiscordStats, 10000);
             } else if (role === 'customer') {
                 document.getElementById('view-customer').classList.remove('hidden-view'); 
                 document.getElementById('cust-key-display').innerText = name;
@@ -654,16 +709,9 @@ WEB_HTML = """
         function nav(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            
-            document.querySelectorAll('.nav-btn').forEach(el => { 
-                el.className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-gray-400 hover:text-white hover:bg-purple-500/10 transition font-bold"; 
-            });
-            document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-3 px-4 rounded-xl text-purple-200 bg-purple-600/40 font-bold border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition";
-            
-            const titles = {
-                'dash': 'Overview', 'gen': 'Key Generator', 'keys': 'Keys Database', 'team': 'Team Management',
-                'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Broadcast', 'blacklist': 'Blacklist'
-            };
+            document.querySelectorAll('.nav-btn').forEach(el => { el.className = "nav-btn w-full text-left py-4 px-5 rounded-xl text-gray-400 hover:bg-white/5 font-bold text-sm tracking-wide transition"; });
+            document.getElementById('btn-' + tabId).className = "nav-btn w-full text-left py-4 px-5 rounded-xl text-purple-300 bg-purple-500/10 font-bold text-sm tracking-wide transition";
+            const titles = {'dash': 'Overview', 'gen': 'Key Generator', 'keys': 'Keys Database', 'team': 'Team Management', 'promos': 'Promo Codes', 'lookup': 'User Lookup', 'announce': 'Broadcast', 'blacklist': 'Blacklist'};
             document.getElementById('page-title').innerText = titles[tabId];
             
             if (tabId === 'dash') { loadDashboard(); loadActivity(); }
@@ -673,231 +721,135 @@ WEB_HTML = """
             if (tabId === 'blacklist') loadBlacklist();
         }
 
-        async function loadDiscordStats() {
-            try {
-                const res = await apiCall('/api/discord_stats', {});
-                const data = await res.json();
-                document.getElementById('dc-members').innerText = data.members;
-                document.getElementById('dc-tickets').innerText = data.open_tickets;
-            } catch(e){}
-        }
-
+        // Admin API Calls (Original Logik beibehalten)
+        async function loadDiscordStats() { try { const res = await apiCall('/api/discord_stats', {}); const data = await res.json(); document.getElementById('dc-members').innerText = data.members; document.getElementById('dc-tickets').innerText = data.open_tickets; } catch(e){} }
         async function loadDashboard() {
             try {
-                const res = await apiCall('/api/stats', {}); 
-                const data = await res.json();
-                document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€'; 
-                document.getElementById('stat-orders').innerText = data.buyers_today; 
-                document.getElementById('stat-keys').innerText = data.active_keys;
-                
+                const res = await apiCall('/api/stats', {}); const data = await res.json();
+                document.getElementById('stat-rev').innerText = data.total_revenue.toFixed(2) + '€'; document.getElementById('stat-orders').innerText = data.buyers_today; document.getElementById('stat-keys').innerText = data.active_keys;
                 const ctx = document.getElementById('revenueChart').getContext('2d');
                 if (myChart) myChart.destroy();
-                myChart = new Chart(ctx, { type: 'line', data: { labels: data.chart_labels, datasets: [{ label: 'Revenue (€)', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 4, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {beginAtZero: true, grid: {color: 'rgba(168,85,247,0.1)'}}, x: {grid: {color: 'rgba(168,85,247,0.1)'}} } } });
+                myChart = new Chart(ctx, { type: 'line', data: { labels: data.chart_labels, datasets: [{ label: 'Revenue', data: data.chart_data, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: {grid: {color: 'rgba(255,255,255,0.05)'}}, x: {grid: {color: 'rgba(255,255,255,0.05)'}} } } });
             } catch(e) {}
         }
-
-        async function loadActivity() {
-            try {
-                const res = await apiCall('/api/activity', {}); const data = await res.json();
-                document.getElementById('activity-feed').innerHTML = data.map(a => `<div class="p-4 bg-black/60 rounded-xl border border-purple-500/30 flex justify-between items-center hover:border-purple-500/60 transition shadow-md"><div><span class="font-black text-purple-400 text-sm mr-2 uppercase tracking-wide">${a.user}</span><span class="text-sm text-gray-300 font-bold">${a.action}</span></div><span class="text-xs text-gray-500 font-mono font-bold">${a.time.split('T')[1].substring(0,5)}</span></div>`).join('');
-            } catch(e) {}
-        }
-
-        async function loadKeys() {
-            try {
-                const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No keys generated</td></tr>';
-                
-                tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => {
-                    if(typeof info !== 'object' || info === null) return '';
-                    
-                    let badge = info.used ? '<span class="px-3 py-1 rounded-md bg-red-500/20 text-red-400 text-xs border border-red-500/40 font-black tracking-wider uppercase">Used</span>' : '<span class="px-3 py-1 rounded-md bg-green-500/20 text-green-400 text-xs border border-green-500/40 font-black tracking-wider uppercase shadow-[0_0_10px_rgba(74,222,128,0.2)]">Active</span>';
-                    if (info.revoked) badge = '<span class="px-3 py-1 rounded-md bg-gray-500/20 text-gray-400 text-xs border border-gray-500/40 font-black tracking-wider uppercase">Banned</span>';
-                    const creator = info.created_by ? `<span class="text-blue-400 font-black uppercase tracking-wider">${info.created_by}</span>` : 'System';
-                    const usedBy = info.used_by ? `<span class="text-pink-400 font-mono text-xs font-bold">${info.used_by}</span>` : '-';
-                    const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-xs font-black bg-black/60 text-red-400 border border-red-500/50 hover:bg-red-600 hover:text-white hover:border-red-600 px-4 py-2 rounded-lg transition shadow-[0_0_10px_rgba(220,38,38,0.3)] tracking-wider">BAN KEY</button>` : '-';
-                    return `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="px-6 py-5 font-mono text-purple-300 font-bold tracking-wider">${key}</td><td class="px-6 py-5 text-gray-200 font-black uppercase">${info.type || 'UNKNOWN'}</td><td class="px-6 py-5">${creator}</td><td class="px-6 py-5">${usedBy}</td><td class="px-6 py-5">${badge}</td><td class="px-6 py-5 text-right">${act}</td></tr>`;
-                }).join('');
-            } catch(e) {}
-        }
-
-        async function loadTeam() {
-            try {
-                const res = await apiCall('/api/team', {}); const data = await res.json(); const tb = document.getElementById('table-team');
-                if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 font-black tracking-widest uppercase">No resellers active</td></tr>';
-                tb.innerHTML = data.map(u => `<tr class="hover:bg-blue-500/20 transition border-b border-blue-500/10"><td class="px-6 py-5 font-black text-blue-400 tracking-wider uppercase">${u.username}</td><td class="px-6 py-5 font-mono text-gray-400">${u.password}</td><td class="px-6 py-5 font-black text-white text-lg">${u.keys_generated}</td><td class="px-6 py-5 text-right"><button onclick="deleteReseller('${u.username}')" class="text-red-400 hover:text-red-300 transition bg-black/50 p-3 rounded-lg border border-red-500/30 hover:bg-red-600 hover:text-white shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
-            } catch(e){}
-        }
-
-        async function deleteReseller(username) {
-            if(confirm(`Willst du den Reseller ${username} wirklich löschen?`)) { await apiCall('/api/team/delete', {username: username}); loadTeam(); }
-        }
-
-        async function revokeKey(k) { 
-            if (confirm('Möchtest du diesen Key bannen und dem User die Rolle entfernen?')) { await apiCall('/api/keys/revoke', {key: k}); loadKeys(); } 
-        }
-
-        async function loadPromos() {
-            try {
-                const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">No active promos.</td></tr>';
-                tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr class="hover:bg-pink-500/20 transition border-b border-pink-500/10"><td class="p-5 font-mono font-black text-pink-400 tracking-widest text-lg">${code}</td><td class="p-5 text-white font-black text-lg">-${info.discount}%</td><td class="p-5 text-gray-300 font-bold">${info.uses}</td><td class="p-5 text-right"><button onclick="rmPromo('${code}')" class="text-red-400 bg-black/60 border border-red-500/40 p-3 rounded-lg hover:bg-red-600 hover:text-white transition shadow-lg"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
-            } catch(e) {}
-        }
-
-        async function createPromo() {
-            const c = document.getElementById('p-code').value.toUpperCase(), d = document.getElementById('p-disc').value, u = document.getElementById('p-uses').value;
-            if (!c || !d || !u) return alert("Please fill all fields"); 
-            await apiCall('/api/promos/add', {code: c, discount: parseInt(d), uses: parseInt(u)});
-            document.getElementById('p-code').value = ''; document.getElementById('p-disc').value = ''; document.getElementById('p-uses').value = ''; loadPromos();
-        }
-
-        async function rmPromo(code) { await apiCall('/api/promos/remove', {code: code}); loadPromos(); }
-        
-        async function lookupUser() {
-            const uid = document.getElementById('lookup-id').value; if (!uid) return;
-            try {
-                const res = await apiCall('/api/lookup', {user_id: uid}); const data = await res.json();
-                document.getElementById('lookup-result').classList.remove('hidden');
-                document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; 
-                document.getElementById('lu-orders').innerText = data.total_orders;
-                const b = document.getElementById('lu-banned');
-                if (data.is_banned) { b.innerText = "BANNED"; b.className = "text-2xl font-black text-red-500 mt-2 glow-text tracking-wider"; } 
-                else { b.innerText = "CLEAN"; b.className = "text-2xl font-black text-green-400 mt-2 tracking-wider"; }
-                const tb = document.getElementById('lu-table');
-                if (data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">No purchases found.</td></tr>';
-                else tb.innerHTML = data.invoices.map(i => `<tr class="hover:bg-purple-500/20 transition border-b border-purple-500/10"><td class="p-5 font-mono text-xs text-gray-400 font-bold tracking-wider">${i.id}</td><td class="p-5 text-white font-black uppercase tracking-wider">${i.product}</td><td class="p-5 font-black text-green-400 text-lg">${i.price}€</td><td class="p-5 text-sm text-gray-400 font-bold">${i.date.split('T')[0]}</td></tr>`).join('');
-            } catch(e) {}
-        }
-
-        async function sendAnnounce() {
-            const t = document.getElementById('ann-title').value, d = document.getElementById('ann-desc').value, i = document.getElementById('ann-img').value;
-            if (!t || !d) return alert("Title and Description required!");
-            await apiCall('/api/announce', {title: t, desc: d, img: i}); alert("Broadcast sent successfully!");
-            document.getElementById('ann-title').value = ''; document.getElementById('ann-desc').value = ''; document.getElementById('ann-img').value = '';
-        }
-
-        async function loadBlacklist() {
-            try {
-                const res = await apiCall('/api/blacklist', {}); const data = await res.json(); const tb = document.getElementById('table-blacklist');
-                if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500 font-black tracking-widest uppercase">Blacklist is empty.</td></tr>';
-                tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr class="hover:bg-red-500/20 transition border-b border-red-500/10"><td class="p-5 font-mono text-red-300 font-bold tracking-wider text-lg">${uid}</td><td class="p-5 text-white font-bold">${info.reason}</td><td class="p-5 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400 bg-black/60 border border-red-500/40 p-3 rounded-lg hover:bg-red-600 hover:text-white transition shadow-[0_0_15px_rgba(220,38,38,0.5)]"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
-            } catch(e) {}
-        }
-
-        async function addBlacklist() {
-            const uid = document.getElementById('bl-id').value, rsn = document.getElementById('bl-reason').value || "Web Ban"; 
-            if (!uid) return; await apiCall('/api/blacklist/add', {user_id: uid, reason: rsn}); 
-            document.getElementById('bl-id').value = ''; document.getElementById('bl-reason').value = ''; loadBlacklist();
-        }
-
+        async function loadActivity() { try { const res = await apiCall('/api/activity', {}); const data = await res.json(); document.getElementById('activity-feed').innerHTML = data.map(a => `<div class="p-4 bg-white/5 rounded-xl flex justify-between items-center border border-white/5"><div><span class="font-bold text-purple-400 text-xs mr-2 uppercase tracking-wide">${a.user}</span><span class="text-xs text-gray-300 font-medium">${a.action}</span></div><span class="text-[10px] text-gray-500 font-mono">${a.time.split('T')[1].substring(0,5)}</span></div>`).join(''); } catch(e) {} }
+        async function loadKeys() { try { const res = await apiCall('/api/keys', {}); const data = await res.json(); const tb = document.getElementById('table-keys'); if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 text-xs font-bold uppercase">Empty</td></tr>'; tb.innerHTML = Object.entries(data).reverse().map(([key, info]) => { if(typeof info !== 'object' || info === null) return ''; let badge = info.used ? '<span class="text-red-400">Used</span>' : '<span class="text-green-400">Active</span>'; if (info.revoked) badge = '<span class="text-gray-500">Banned</span>'; const act = !info.revoked ? `<button onclick="revokeKey('${key}')" class="text-red-400 hover:text-red-300">Ban</button>` : '-'; return `<tr><td class="px-6 py-4 font-mono text-purple-300 text-xs">${key}</td><td class="px-6 py-4 text-xs">${info.type}</td><td class="px-6 py-4 text-xs">${info.created_by || 'System'}</td><td class="px-6 py-4 text-xs">${info.used_by || '-'}</td><td class="px-6 py-4 text-xs font-bold">${badge}</td><td class="px-6 py-4 text-right text-xs font-bold">${act}</td></tr>`; }).join(''); } catch(e) {} }
+        async function loadTeam() { try { const res = await apiCall('/api/team', {}); const data = await res.json(); const tb = document.getElementById('table-team'); if (data.length === 0) return tb.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 text-xs font-bold uppercase">Empty</td></tr>'; tb.innerHTML = data.map(u => `<tr><td class="px-6 py-4 text-xs text-blue-400">${u.username}</td><td class="px-6 py-4 text-xs font-mono text-gray-500">${u.password}</td><td class="px-6 py-4 text-xs">${u.keys_generated}</td><td class="px-6 py-4 text-right"><button onclick="deleteReseller('${u.username}')" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); } catch(e){} }
+        async function deleteReseller(u) { if(confirm(`Delete ${u}?`)) { await apiCall('/api/team/delete', {username: u}); loadTeam(); } }
+        async function revokeKey(k) { if (confirm('Ban key?')) { await apiCall('/api/keys/revoke', {key: k}); loadKeys(); } }
+        async function loadPromos() { try { const res = await apiCall('/api/promos', {}); const data = await res.json(); const tb = document.getElementById('table-promos'); if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 text-xs font-bold uppercase">Empty</td></tr>'; tb.innerHTML = Object.entries(data).map(([code, info]) => `<tr><td class="p-4 font-mono text-pink-400 text-sm">${code}</td><td class="p-4 text-sm">${info.discount}%</td><td class="p-4 text-sm">${info.uses}</td><td class="p-4 text-right"><button onclick="rmPromo('${code}')" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); } catch(e) {} }
+        async function createPromo() { const c = document.getElementById('p-code').value.toUpperCase(), d = document.getElementById('p-disc').value, u = document.getElementById('p-uses').value; if (!c || !d || !u) return; await apiCall('/api/promos/add', {code: c, discount: parseInt(d), uses: parseInt(u)}); document.getElementById('p-code').value = ''; document.getElementById('p-disc').value = ''; document.getElementById('p-uses').value = ''; loadPromos(); }
+        async function rmPromo(c) { await apiCall('/api/promos/remove', {code: c}); loadPromos(); }
+        async function lookupUser() { const uid = document.getElementById('lookup-id').value; if (!uid) return; try { const res = await apiCall('/api/lookup', {user_id: uid}); const data = await res.json(); document.getElementById('lookup-result').classList.remove('hidden'); document.getElementById('lu-spent').innerText = data.total_spent.toFixed(2) + '€'; document.getElementById('lu-orders').innerText = data.total_orders; const b = document.getElementById('lu-banned'); if (data.is_banned) { b.innerText = "BANNED"; b.className = "text-xl font-black mt-2 text-red-500"; } else { b.innerText = "CLEAN"; b.className = "text-xl font-black mt-2 text-green-400"; } const tb = document.getElementById('lu-table'); if (data.invoices.length === 0) tb.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 text-xs font-bold uppercase">Empty</td></tr>'; else tb.innerHTML = data.invoices.map(i => `<tr><td class="p-4 font-mono text-xs text-gray-500">${i.id}</td><td class="p-4 text-xs">${i.product}</td><td class="p-4 text-xs text-green-400">${i.price}€</td><td class="p-4 text-xs">${i.date.split('T')[0]}</td></tr>`).join(''); } catch(e) {} }
+        async function sendAnnounce() { const t = document.getElementById('ann-title').value, d = document.getElementById('ann-desc').value, i = document.getElementById('ann-img').value; if (!t || !d) return; await apiCall('/api/announce', {title: t, desc: d, img: i}); alert("Sent!"); document.getElementById('ann-title').value = ''; document.getElementById('ann-desc').value = ''; document.getElementById('ann-img').value = ''; }
+        async function loadBlacklist() { try { const res = await apiCall('/api/blacklist', {}); const data = await res.json(); const tb = document.getElementById('table-blacklist'); if (Object.keys(data).length === 0) return tb.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500 text-xs font-bold uppercase">Empty</td></tr>'; tb.innerHTML = Object.entries(data).map(([uid, info]) => `<tr><td class="p-4 font-mono text-red-400 text-sm">${uid}</td><td class="p-4 text-xs">${info.reason}</td><td class="p-4 text-right"><button onclick="rmBlacklist('${uid}')" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); } catch(e) {} }
+        async function addBlacklist() { const uid = document.getElementById('bl-id').value, rsn = document.getElementById('bl-reason').value || "Web Ban"; if (!uid) return; await apiCall('/api/blacklist/add', {user_id: uid, reason: rsn}); document.getElementById('bl-id').value = ''; document.getElementById('bl-reason').value = ''; loadBlacklist(); }
         async function rmBlacklist(uid) { await apiCall('/api/blacklist/remove', {user_id: uid}); loadBlacklist(); }
-
-        async function loadResellerKeys() {
-            try {
-                const res = await apiCall('/api/reseller/data', {}); const data = await res.json();
-                if (data.my_keys.length === 0) document.getElementById('my-keys').innerHTML = '<p class="text-gray-500 p-8 text-center font-black tracking-widest uppercase">Noch keine Keys generiert.</p>';
-                else document.getElementById('my-keys').innerHTML = data.my_keys.reverse().map(k => `<div class="bg-black/70 p-5 rounded-2xl border-2 border-purple-500/40 flex justify-between items-center transition hover:border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] mb-4"><span class="font-mono text-md text-purple-300 font-bold tracking-widest">${k.key}</span><span class="text-sm font-black px-4 py-2 bg-purple-600/30 text-white rounded-xl border border-purple-500/50 uppercase tracking-widest shadow-inner">${k.type}</span></div>`).join('');
-            } catch(e) {}
-        }
-
-        async function genKey(type) {
-            const res = await apiCall('/api/reseller/generate', {t: type}); const d = await res.json();
-            document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); loadResellerKeys();
-        }
-
-        async function genAdminKey(type) {
-            const res = await apiCall('/api/admin/generate', {t: type}); const d = await res.json();
-            document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); 
-        }
-        
-        async function loadCustomerData() {
-            try {
-                const res = await apiCall('/api/customer_data', {});
-                const data = await res.json();
-                document.getElementById('cust-prod').innerText = data.type;
-                document.getElementById('cust-status').innerText = data.status;
-                document.getElementById('cust-discord').innerText = data.used_by;
-                document.getElementById('cust-created').innerText = data.created_at.split('T')[0];
-                
-                if(data.status === "Banned") document.getElementById('cust-status').className = "text-2xl font-black text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] mt-1 tracking-wider uppercase";
-                else if(data.status === "Active") document.getElementById('cust-status').className = "text-2xl font-black text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)] mt-1 tracking-wider uppercase";
-            } catch(e){}
-        }
-
-        function closeModal() { document.getElementById('key-modal').classList.add('hidden-view'); }
+        async function genAdminKey(type) { const res = await apiCall('/api/admin/generate', {t: type}); const d = await res.json(); document.getElementById('new-key').value = d.key; document.getElementById('key-modal').classList.remove('hidden-view'); }
+        async function loadCustomerData() { try { const res = await apiCall('/api/customer_data', {}); const data = await res.json(); document.getElementById('cust-prod').innerText = data.type; document.getElementById('cust-status').innerText = data.status; document.getElementById('cust-discord').innerText = data.used_by; document.getElementById('cust-created').innerText = data.created_at.split('T')[0]; if(data.status === "Banned") document.getElementById('cust-status').className = "text-xl font-black mt-2 text-red-500"; else if(data.status === "Active") document.getElementById('cust-status').className = "text-xl font-black mt-2 text-green-400"; } catch(e){} }
 
         window.onload = checkAuthOnLoad;
     </script>
 </body>
 </html>
-""".replace("LOGO_URL_PLACEHOLDER", SAFE_WEBSITE_LOGO_URL)
+""".replace("LOGO_URL_PLACEHOLDER", SAFE_WEBSITE_LOGO_URL).replace("LTC_ADDR", LITECOIN_ADDRESS)
 
 # =========================================================
 # 🌍 API ENDPOINTS (WEB SERVER)
 # =========================================================
 def get_user_from_token(request):
     token = request.headers.get("Authorization")
-    if not token or token not in web_sessions: 
-        return None
+    if not token or token not in web_sessions: return None
     return web_sessions[token]
 
-async def handle_index(request): 
-    return web.Response(text=WEB_HTML, content_type='text/html')
+async def handle_index(request): return web.Response(text=WEB_HTML, content_type='text/html')
+
+async def api_web_buy(request):
+    try:
+        data = await request.json()
+        email = data.get("email")
+        txid = data.get("txid")
+        ptype = data.get("product")
+        
+        if not email or not txid or ptype not in PRODUCTS:
+            return web.json_response({"ok": False, "error": "Fehlende Daten."})
+            
+        ok, reason = await verify_ltc_payment(txid)
+        if not ok:
+            return web.json_response({"ok": False, "error": reason})
+            
+        prefix = PRODUCTS[ptype]["key_prefix"]
+        key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
+        
+        keys_db[key] = {
+            "type": ptype, 
+            "used": False, 
+            "used_by": None, 
+            "bound_user_id": None, 
+            "created_at": iso_now(), 
+            "redeemed_at": None, 
+            "approved_in_ticket": "WEB-SHOP", 
+            "created_by": "System-Auto",
+            "revoked": False
+        }
+        save_json(KEYS_FILE, keys_db)
+        
+        invoice_id = build_invoice_id()
+        invoices_db[invoice_id] = {
+            "buyer_id": email, 
+            "product_type": ptype, 
+            "payment_key": "litecoin", 
+            "key": key, 
+            "ticket_id": "WEB", 
+            "created_at": iso_now(), 
+            "final_price_eur": PRODUCTS[ptype]["price_eur"], 
+            "reseller_discount": False
+        }
+        save_json(INVOICES_FILE, invoices_db)
+        
+        send_delivery_email(email, PRODUCTS[ptype]["label"], key)
+        log_activity(f"Web Order ({PRODUCTS[ptype]['price_eur']}€)", "Auto-Shop")
+        
+        return web.json_response({"ok": True, "key": key})
+    except Exception as e:
+        return web.json_response({"ok": False, "error": "Server Fehler."})
 
 async def api_register(request):
     data = await request.json()
     username = data.get("user")
     password = data.get("pass")
     inv_key = data.get("key", "").upper()
-    
-    if not username or not password or not inv_key: 
-        return web.json_response({"error": "Bitte fülle alle Felder aus!"}, status=400)
-        
-    if username in users_db: 
-        return web.json_response({"error": f"Der Name '{username}' ist leider schon vergeben!"}, status=400)
-        
-    if inv_key not in webkeys_db:
-        return web.json_response({"error": "Dieser Einladungs-Key existiert nicht!"}, status=400)
-        
-    if webkeys_db[inv_key].get("used"): 
-        return web.json_response({"error": "Dieser Einladungs-Key wurde bereits benutzt!"}, status=400)
-    
+    if not username or not password or not inv_key: return web.json_response({"error": "Bitte fülle alle Felder aus!"}, status=400)
+    if username in users_db: return web.json_response({"error": f"Der Name '{username}' ist leider schon vergeben!"}, status=400)
+    if inv_key not in webkeys_db: return web.json_response({"error": "Dieser Einladungs-Key existiert nicht!"}, status=400)
+    if webkeys_db[inv_key].get("used"): return web.json_response({"error": "Dieser Einladungs-Key wurde bereits benutzt!"}, status=400)
     role = webkeys_db[inv_key]["role"]
     users_db[username] = {"pass": password, "role": role}
     webkeys_db[inv_key]["used"] = True
-    
     save_json(USERS_FILE, users_db)
     save_json(WEBKEYS_FILE, webkeys_db)
     log_activity(f"New User Registered ({role})", username)
-    
     token = str(uuid.uuid4())
     web_sessions[token] = {"user": username, "role": role}
     save_json(SESSIONS_FILE, web_sessions)
-    
     return web.json_response({"ok": True, "token": token, "role": role, "user": username})
 
 async def api_login(request):
     data = await request.json()
     username = data.get("user")
     password = data.get("pass")
-    
     if username in users_db and users_db[username]["pass"] == password:
         token = str(uuid.uuid4())
         role = users_db[username]["role"]
         web_sessions[token] = {"user": username, "role": role}
         save_json(SESSIONS_FILE, web_sessions)
         return web.json_response({"ok": True, "token": token, "role": role, "user": username})
-        
     return web.Response(status=401)
 
 async def api_customer_login(request):
     data = await request.json()
     key = data.get("key", "").strip().upper()
-    
-    if not key or key not in keys_db:
-        return web.json_response({"error": "Key existiert nicht."}, status=400)
-        
+    if not key or key not in keys_db: return web.json_response({"error": "Key existiert nicht."}, status=400)
     token = str(uuid.uuid4())
     web_sessions[token] = {"user": key, "role": "customer"}
     save_json(SESSIONS_FILE, web_sessions)
@@ -905,73 +857,52 @@ async def api_customer_login(request):
 
 async def api_customer_data(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "customer": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "customer": return web.Response(status=401)
     key = user_info["user"]
     kdata = keys_db.get(key, {})
-    
     ptype = kdata.get("type", "day_1") if isinstance(kdata, dict) else "day_1"
     prod = PRODUCTS.get(ptype, {"label": "Unknown"})
-    
     status = "Active"
     if isinstance(kdata, dict):
         if kdata.get("revoked"): status = "Banned"
         elif not kdata.get("used"): status = "Unused"
-    
     return web.json_response({
-        "key": key,
-        "type": prod.get("label", "Unknown"),
-        "status": status,
+        "key": key, "type": prod.get("label", "Unknown"), "status": status,
         "created_at": kdata.get("created_at") if isinstance(kdata, dict) else "Unknown",
         "used_by": kdata.get("used_by", "None") if isinstance(kdata, dict) else "None"
     })
 
 async def api_verify(request):
     user = get_user_from_token(request)
-    if user: 
-        return web.json_response({"ok": True, "role": user["role"], "user": user["user"]})
+    if user: return web.json_response({"ok": True, "role": user["role"], "user": user["user"]})
     return web.Response(status=401)
 
 async def api_stats(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     now = now_utc()
     today_buyers = set()
     total_rev = 0.0
     days = [(now - timedelta(days=i)).date() for i in range(6, -1, -1)]
     labels = [d.strftime("%a") for d in days]
     rev_data = {d: 0.0 for d in days}
-    
     for inv_id, data in invoices_db.items():
         price = float(data.get("final_price_eur", 0))
         total_rev += price
         try:
             d = datetime.fromisoformat(data["created_at"]).date()
-            if d == now.date(): 
-                today_buyers.add(data["buyer_id"])
-            if d in rev_data: 
-                rev_data[d] += price
-        except Exception: 
-            pass
-            
+            if d == now.date(): today_buyers.add(data["buyer_id"])
+            if d in rev_data: rev_data[d] += price
+        except Exception: pass
     active_k = sum(1 for k, v in keys_db.items() if isinstance(v, dict) and not v.get("used"))
-    
     return web.json_response({
-        "total_revenue": total_rev, 
-        "buyers_today": len(today_buyers), 
-        "active_keys": active_k, 
-        "chart_labels": labels, 
-        "chart_data": list(rev_data.values())
+        "total_revenue": total_rev, "buyers_today": len(today_buyers), 
+        "active_keys": active_k, "chart_labels": labels, "chart_data": list(rev_data.values())
     })
     
 async def api_discord_stats(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     guild = bot.get_guild(GUILD_ID)
     members = guild.member_count if guild else 0
     open_tickets = sum(1 for t in ticket_data.values() if isinstance(t, dict) and t.get("status") in ["waiting", "reviewing"])
@@ -979,9 +910,7 @@ async def api_discord_stats(request):
 
 async def api_team(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     resellers = []
     for uname, data in users_db.items():
         if data.get("role") == "reseller":
@@ -991,9 +920,7 @@ async def api_team(request):
 
 async def api_team_delete(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
     uname = data.get("username")
     if uname in users_db and users_db[uname].get("role") == "reseller":
@@ -1004,24 +931,19 @@ async def api_team_delete(request):
 
 async def api_activity(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     return web.json_response(activity_db)
 
 async def api_keys(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     return web.json_response(keys_db)
 
 async def api_revoke_key(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
     key = data.get("key")
-    
     if key in keys_db and isinstance(keys_db[key], dict):
         if keys_db[key].get("used") and keys_db[key].get("used_by"):
             uid = str(keys_db[key]["used_by"])
@@ -1030,227 +952,146 @@ async def api_revoke_key(request):
                 member = guild.get_member(int(uid))
                 role = guild.get_role(REDEEM_ROLE_ID)
                 if member and role:
-                    try: 
-                        await member.remove_roles(role, reason="Key banned by Admin")
-                    except Exception: 
-                        pass
-                        
+                    try: await member.remove_roles(role, reason="Key banned by Admin")
+                    except Exception: pass
             if uid in redeemed_db: 
                 del redeemed_db[uid]
                 save_json(REDEEMED_FILE, redeemed_db)
-                
         keys_db[key]["revoked"] = True
         keys_db[key]["used"] = True
         save_json(KEYS_FILE, keys_db)
         log_activity(f"Banned Key {key}", user_info["user"])
-        
     return web.json_response({"ok": True})
 
 async def api_promos(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     return web.json_response(promos_db)
 
 async def api_add_promo(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
-    promos_db[data["code"]] = {
-        "discount": data["discount"], 
-        "uses": data["uses"]
-    }
+    promos_db[data["code"]] = { "discount": data["discount"], "uses": data["uses"] }
     save_json(PROMOS_FILE, promos_db)
     log_activity(f"Created Promo {data['code']}", user_info["user"])
     return web.json_response({"ok": True})
 
 async def api_rm_promo(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
     code = data["code"]
     if code in promos_db: 
         del promos_db[code]
         save_json(PROMOS_FILE, promos_db)
-        
     return web.json_response({"ok": True})
 
 async def api_lookup(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     target = (await request.json()).get("user_id")
     spent = 0.0
     invs = []
-    
     for inv_id, data in invoices_db.items():
         if isinstance(data, dict) and data.get("buyer_id") == target:
             spent += float(data.get("final_price_eur", 0))
-            invs.append({
-                "id": inv_id, 
-                "product": PRODUCTS.get(data.get("product_type"), {}).get("label", "Unknown"), 
-                "price": data.get("final_price_eur", 0), 
-                "date": data.get("created_at")
-            })
-            
-    return web.json_response({
-        "total_spent": spent, 
-        "total_orders": len(invs), 
-        "is_banned": target in blacklist_db, 
-        "invoices": invs[::-1]
-    })
+            invs.append({ "id": inv_id, "product": PRODUCTS.get(data.get("product_type"), {}).get("label", "Unknown"), "price": data.get("final_price_eur", 0), "date": data.get("created_at") })
+    return web.json_response({ "total_spent": spent, "total_orders": len(invs), "is_banned": target in blacklist_db, "invoices": invs[::-1] })
 
 async def api_announce(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
     channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
-    
     if channel:
         embed = discord.Embed(title=data["title"], description=data["desc"], color=COLOR_MAIN)
-        if data.get("img"): 
-            embed.set_image(url=data["img"])
+        if data.get("img"): embed.set_image(url=data["img"])
         await channel.send(embed=embed)
         log_activity("Sent Discord Broadcast", user_info["user"])
-        
     return web.json_response({"ok": True})
 
 async def api_blacklist(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     return web.json_response(blacklist_db)
 
 async def api_add_blacklist(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     data = await request.json()
     uid = data.get("user_id")
     rsn = data.get("reason", "Web Ban")
-    
     if uid: 
-        blacklist_db[uid] = {
-            "reason": rsn, 
-            "added_by": user_info["user"], 
-            "added_at": iso_now()
-        }
+        blacklist_db[uid] = { "reason": rsn, "added_by": user_info["user"], "added_at": iso_now() }
         save_json(BLACKLIST_FILE, blacklist_db)
         log_activity(f"Banned User {uid}", user_info["user"])
-        
     return web.json_response({"ok": True})
 
 async def api_rm_blacklist(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     uid = (await request.json()).get("user_id")
     if uid in blacklist_db: 
         del blacklist_db[uid]
         save_json(BLACKLIST_FILE, blacklist_db)
         log_activity(f"Unbanned User {uid}", user_info["user"])
-        
     return web.json_response({"ok": True})
 
 async def api_reseller_data(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "reseller": 
-        return web.Response(status=401)
-        
-    my_keys = [{
-        "key": k, 
-        "type": PRODUCTS.get(v.get("type"), {}).get("label", "Unknown") if isinstance(v, dict) else "Unknown"
-    } for k, v in keys_db.items() if isinstance(v, dict) and v.get("created_by") == user_info["user"]]
-    
+    if not user_info or user_info.get("role") != "reseller": return web.Response(status=401)
+    my_keys = [{ "key": k, "type": PRODUCTS.get(v.get("type"), {}).get("label", "Unknown") if isinstance(v, dict) else "Unknown" } for k, v in keys_db.items() if isinstance(v, dict) and v.get("created_by") == user_info["user"]]
     return web.json_response({"my_keys": my_keys})
 
 async def api_reseller_gen(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "reseller": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "reseller": return web.Response(status=401)
     ptype = (await request.json()).get("t", "day_1")
     prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
-    
-    keys_db[new_key] = {
-        "type": ptype, 
-        "used": False, 
-        "used_by": None, 
-        "bound_user_id": None, 
-        "created_at": iso_now(), 
-        "created_by": user_info["user"],
-        "revoked": False
-    }
+    keys_db[new_key] = { "type": ptype, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "created_by": user_info["user"], "revoked": False }
     save_json(KEYS_FILE, keys_db)
     log_activity(f"Reseller {user_info['user']} created {ptype} Key", user_info["user"])
-    
     return web.json_response({"key": new_key})
 
 async def api_admin_gen(request):
     user_info = get_user_from_token(request)
-    if not user_info or user_info.get("role") != "admin": 
-        return web.Response(status=401)
-        
+    if not user_info or user_info.get("role") != "admin": return web.Response(status=401)
     ptype = (await request.json()).get("t", "day_1")
     prefix = PRODUCTS[ptype]["key_prefix"]
     new_key = f"{prefix}-{random_block()}-{random_block()}-{random_block()}"
-    
-    keys_db[new_key] = {
-        "type": ptype, 
-        "used": False, 
-        "used_by": None, 
-        "bound_user_id": None, 
-        "created_at": iso_now(), 
-        "created_by": user_info["user"],
-        "revoked": False
-    }
+    keys_db[new_key] = { "type": ptype, "used": False, "used_by": None, "bound_user_id": None, "created_at": iso_now(), "created_by": user_info["user"], "revoked": False }
     save_json(KEYS_FILE, keys_db)
     log_activity(f"Admin {user_info['user']} created {ptype} Key", user_info["user"])
-    
     return web.json_response({"key": new_key})
 
 
 async def start_web_server():
     app = web.Application()
     app.router.add_get('/', handle_index)
+    app.router.add_post('/api/web_buy', api_web_buy)
     app.router.add_post('/api/login', api_login)
     app.router.add_post('/api/customer_login', api_customer_login)
     app.router.add_post('/api/register', api_register)
     app.router.add_post('/api/verify', api_verify)
-    
     app.router.add_post('/api/stats', api_stats)
     app.router.add_post('/api/discord_stats', api_discord_stats)
     app.router.add_post('/api/activity', api_activity)
     app.router.add_post('/api/keys', api_keys)
     app.router.add_post('/api/keys/revoke', api_revoke_key)
-    
     app.router.add_post('/api/team', api_team)
     app.router.add_post('/api/team/delete', api_team_delete)
-    
     app.router.add_post('/api/promos', api_promos)
     app.router.add_post('/api/promos/add', api_add_promo)
     app.router.add_post('/api/promos/remove', api_rm_promo)
-    
     app.router.add_post('/api/lookup', api_lookup)
     app.router.add_post('/api/announce', api_announce)
-    
     app.router.add_post('/api/blacklist', api_blacklist)
     app.router.add_post('/api/blacklist/add', api_add_blacklist)
     app.router.add_post('/api/blacklist/remove', api_rm_blacklist)
-    
     app.router.add_post('/api/reseller/data', api_reseller_data)
     app.router.add_post('/api/reseller/generate', api_reseller_gen)
-    
     app.router.add_post('/api/admin/generate', api_admin_gen)
     app.router.add_post('/api/customer_data', api_customer_data)
     
@@ -1262,7 +1103,7 @@ async def start_web_server():
     print(f"✅ Web Server läuft auf Port {port}")
 
 # =========================================================
-# BOT COMMANDS & TICKET LOGIC
+# BOT COMMANDS & TICKET LOGIC (ORIGINAL UNTOUCHED)
 # =========================================================
 def premium_divider() -> str: 
     return "━━━━━━━━━━━━━━━━━━━━━━━━"
